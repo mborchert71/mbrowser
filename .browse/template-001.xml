@@ -2,6 +2,11 @@
 <html id="background"><head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta charset="utf-8"/>
+<meta http-equiv="cache-control" content="max-age=0" />
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="expires" content="0" />
+<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT" />
+<meta http-equiv="pragma" content="no-cache" />
 <title>Media-Browser</title>
 <style>
 * {margin:0;padding:0;
@@ -114,19 +119,22 @@
 <script></script>
 </head>
 <body>
-    <img id="wallpaper" src="wallpaper.placeholder" />
+    <img id="wallpaper" src=".browse/images/fx_wallpaper.png" />
     <div id="content">
-        <img id="cast" src="cast.placeholder"/>
+        <img id="cast" src=".browse/images/fx_cast.jpg"/>
     </div>
     <div id="interface">
         <table id="layout">
         <tbody>
         <tr >
-            <td><img id="logo" src="logo.placeholder"/>
+            <td><img id="logo" src=".browse/images/fx_logo.png"/>
             </td>
             <td class="menu-panel">
             </td>
-            <td></td>
+            <td style="text-align:right;vertical-align:top">
+              <a href="search.placeholder"><img onclick="var input=prompt('tags:less is more');this.parentNode.href+='&tags='+input;" src=".browse/images/search-button.png" style="margin:4px;width:32px;height:32px"/></a>
+              <a href="setup.placeholder"><img title="setup-title.placeholder" src=".browse/images/setup-button.png" style="margin:4px;width:32px;height:32px"/></a>
+            </td>
             </tr>
         <tr>
             <td class="content-panel" colspan=3><div style="position:absolute;height:100%;overflow:auto">{content}
@@ -140,7 +148,6 @@
             </tr>
         </tbody>
         </table>
-        <a href="setup.placeholder"><img title="setup-title.placeholder" src=".browse/images/setup-button.placeholder.png" style="position:absolute;right:0;top:0;margin:4px;width:32px;height:32px"/></a>
     </div>
     <iframe id="bypass" name="bypass" style="display:none" src=""></iframe>
 </body>

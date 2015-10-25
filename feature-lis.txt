@@ -1,0 +1,18 @@
+-------------------------------------------------------------------------------------------------------------
+
+# php onboard crossplatform portable
+# drop and fire-up / paste and play / no-install
+# kleiner 5mb inklusive php
+# keine Datei Operationen Einschränkung oder Überwachung im "Nutzerbereich"
+# jeder Ordner: individuell, vom_parent_geerbt, im_default oder gar_keinem layout.
+# webservices ohne account. traffic (popularity) and use (acknowledgment) are payment.
+# zentrale als erweiterung, vernetzen und verwalten der einzelnen drop-in's
+# weitere entwicklung der üblichen Explorer Funktionen select cut copy paste rename delete move contextmenu
+# einbinden offener webservices Medien News Entertainment
+# statt plugins soll nur noch configurations-datei benötigt werden ... und selbstredend bei services , jene auch installiert vorhanden
+-------------------------------------------------------------------------------------------------------------
+# native Programme im split-screen bzw overlay oder online-apps in browser tabs
+# NoSql? NoDb! Dateiname zusammen mit dem Pfad werden als aussagekräftig vorausgesetzt.
+# die Ausrichtung ist näher am Explorer als an den Fernseher, darum auch immer die direkte! Edition der Daten angestrebt
+# Multitasking Fähigkeit des PCs bleibt erhalten, neben dem auch hier bevorzugtem Vollbildmodus.  
+# "Das Betreten des Ordners" soll optisch ganz dem Topic gehören und nicht als Star in einem Programm/MedienCenter erscheinen

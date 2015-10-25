@@ -1,0 +1,34 @@
+23.10.2015 23:23:17,84	initial changelog entry
+24.10.2015  0:53:46,40	ReQUEST title, für genauere layout-suche und screenshots/cover für dateien
+24.10.2015 21:04:48,10	foldpage ent-html-ed nach folder_layout.php 
+25.10.2015  1:32:24,46	rootpage ent-html-ed nach root_layout.php
+25.10.2015  9:38:27,67	suche mit fetch.log abgleichen (doubletten vermeiden)
+25.10.2015 10:04:33,39	alle bilder mit select
+25.10.2015 10:27:38,58	dummy_cast_image
+25.10.2015 16:24:18,13	async search! must spawn extra server (unvollendet, windows blockt oder trafficsauger von search.php)
+25.10.2015 16:24:18,13	research im .browse/ fenster
+25.10.2015 19:03:35,28	last ("watched") clicked Episode (sophisticated, erst wenn code clean ist)
+25.10.2015 20:19:08,94	research-button im .browse
+
+----github--update-------------------------------------------------------------------------------------------
+
+aufräumen teil 2
+	kommentar in funktion schreiben
+		was mach ich hier, 
+		warum ist es eine funktion 
+		und nicht im aufruf oder in der weiterleitung ?
+		den Rest html aus main raus.
+		main muss stable werden!!! heisst änderungen und erweiterungen nur noch in den includes.
+
+	image (search) for sub-fifo
+	search fetch title count ...
+	peeping tom , spitfire searchtags ..support-tags cant outweigh popularity of main sense
+	frame zum browsen
+	menu - box ... und panel-like hide
+	playlist
+	cards fifo
+	47lo  layout
+	support-comfort move .file/poster > folder images
+	maintain - year
+	links. zb: Hulk/* ->linkto The Avengers/HUlk (2008) /The incredible Hulk (201?)
+	#rootpage navi
