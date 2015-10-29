@@ -69,6 +69,7 @@ jpg	image/jpeg
 js	application/x-javascript
 latex	application/x-latex
 lha	application/octet-stream
+log	text/plain
 lsf	video/x-la-asf
 lsx	video/x-la-asf
 lzh	application/octet-stream

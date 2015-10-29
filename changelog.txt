@@ -5,30 +5,82 @@
 25.10.2015  9:38:27,67	suche mit fetch.log abgleichen (doubletten vermeiden)
 25.10.2015 10:04:33,39	alle bilder mit select
 25.10.2015 10:27:38,58	dummy_cast_image
-25.10.2015 16:24:18,13	async search! must spawn extra server (unvollendet, windows blockt oder trafficsauger von search.php)
+25.10.2015 16:24:18,13	async search! must spawn extra server (unvollendet)
 25.10.2015 16:24:18,13	research im .browse/ fenster
-25.10.2015 19:03:35,28	last ("watched") clicked Episode (sophisticated, erst wenn code clean ist)
+25.10.2015 19:03:35,28	last ("watched") clicked Episode
 25.10.2015 20:19:08,94	research-button im .browse
+25.10.2015 21:30:42,11	bug foldset : open log
+26.10.2015 21:30:14,33	sämtliches html aus main entfernt
+27.10.2015  0:09:41,46	folder cover in subs (manual installment)
+27.10.2015  9:29:58,48	search-button if no cover
+27.10.2015 10:49:54,03	layout.file_item strtolower(extension) 
+27.10.2015 16:39:56,67	main pretested state frozen candidate
+27.10.2015 19:15:13,85	layout handling for sub-fifos
+27.10.2015 20:36:07,45	rootpage pimpedabit
+27.10.2015 21:41:34,11	root setup.browse switch
+28.10.2015  9:20:07,20	Form open end aus main entfernen, urlencode setup_layout submit 
+28.10.2015 10:33:01,68	oberste Ordner reihe nicht clickbar wenn kein Logo vorhanden.
+28.10.2015 11:14:33,53	dummy for cast or wallpaper (or logo)
+28.10.2015 12:54:29,33	mkdir .browse/mirror onEnter
+28.10.2015 17:01:58,88	search yahoo! improvements, form in .browse/*/images
+28.10.2015 20:01:47,08	sample environment .browse/.browse
+	layout_php zu class render komprimieren
+	setup encode decode desaster
+	includer $dir in *layout.php
+	Cfg Folder Images rename Setup Images
+	getridof fx_
+	search chaos
+	most common mime types renderer text,image,video,audio,... or lets say film stripes for video
 
 ----github--update-------------------------------------------------------------------------------------------
-
-aufräumen teil 2
-	kommentar in funktion schreiben
-		was mach ich hier, 
-		warum ist es eine funktion 
-		und nicht im aufruf oder in der weiterleitung ?
-		den Rest html aus main raus.
-		main muss stable werden!!! heisst änderungen und erweiterungen nur noch in den includes.
-
-	image (search) for sub-fifo
-	search fetch title count ...
-	peeping tom , spitfire searchtags ..support-tags cant outweigh popularity of main sense
-	frame zum browsen
-	menu - box ... und panel-like hide
+	global.ini to form
+	maintain : rename , convert , waisen , remove images clean fetch list tag:removed
+----linux--execution-test-------------------------------------------------------------------------------------
+	loading animation
+	layout handling for sub-files
+	year
 	playlist
+	play_next
+	filtered content auto-search goes to .file . should look up and save to usual struct
+	links. zb: Hulk/* ->linkto The Avengers/HUlk (2008) /The incredible Hulk (201?)
 	cards fifo
 	47lo  layout
 	support-comfort move .file/poster > folder images
-	maintain - year
-	links. zb: Hulk/* ->linkto The Avengers/HUlk (2008) /The incredible Hulk (201?)
-	#rootpage navi
+	create_preview() background-color at runtime
+	
+	
+<!DOCTYPE html>
+<html>
+<head>
+<style> 
+#myDIV {
+    width: 300px;
+    height: 200px;
+    background: red;
+    -webkit-animation: mymove 5s infinite; /* Chrome, Safari, Opera */
+    animation: mymove 5s infinite;
+}
+
+/* Chrome, Safari, Opera */
+@-webkit-keyframes mymove {
+    from {background-color: red;}
+    to {background-color: blue;}
+}
+
+/* Standard syntax */
+@keyframes mymove {
+    from {background-color: red;}
+    to {background-color: blue;}
+}
+</style>
+</head>
+<body>
+
+<p>Gradually change the background-color from red, to blue:<p>
+<div id="myDIV"></div>
+
+<p>The background-position property is <em>animatable</em> in CSS.</p>
+<p><strong>Note:</strong> CSS Animations do not work in Internet Explorer 9 and earlier versions.</p>
+
+</body>
+</html>
