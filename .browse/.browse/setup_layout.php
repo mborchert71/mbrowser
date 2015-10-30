@@ -1,210 +1,241 @@
 <?php namespace render;
 
-$mirrorpath= substr($dir,strlen(".browse/")); //$dir comes from includer!
-if($mirrorpath && !is_dir($mirrorpath)){
-  if(!mkdir($mirrorpath)){
-    trace_log("folder_item.mkdir ./browse/$mirrorpath");
-    return;
+class folder {
+  public $dir;
+  public $path;
+  public $docroot_path;
+  public $url;
+  public $urlq;
+  public $label;
+  public $set;
+  public $renderer= [];
+  public $stackoprints=[];
+  public function print_page(){
+    $router = ["print_file","print_folder"];
+    $this->print_start() ;
+    //
+    foreach(glob($this->path."/".$this->filter."*") as $fifo){
+      if(!in_array($fifo,$this->excludes)){
+        $this->$router[intval(is_dir($fifo))]($fifo);
+        }
+      }
+    //
+    $this->print_end();
     }
-  }
-
-$_SERVER["RESPONSE"]["STACK"] = [];
-
-$_SERVER["CFG"]["RENDERER"] = [ //todo:cfg
-"jpg" => "image_item",
-"jpeg"=> "image_item",
-"png"=> "image_item",
-"gif"=> "image_item",
-"bmp"=> "image_item"
-];
-//
-$default = new \stdClass;
-const form_open = "<form method=\"post\" action=\"?0={dir}\">";
-const form_close= "<hr style=\"width:50%;clear:both\"/><input type=\"submit\"/></form>";
-$default->folder    = "<a href=\"{url}\"><div class=\"folder {class}\">{folder}</div></a>";
-$default->file      = "<div class=\"file {class}\"><a href=\"{url}\" target=\"{target}\">{file}</a>{input}</div>";
-$default->image     = "<img src=\"{url}\" width=\"100%\" height=\"100%\" style=\"position:relative;opacity:1\"/>";
-$default->wallpaper = ".browse/images/fx_wallpaper.png";
-$default->cast      = ".browse/images/fx_cast.jpg";
-$default->logo      = ".browse/images/fx_logo.png";
-$default->path      = "./";
-$default->setup_url = "";
-$default->setup_click="";
-$default->setup_image=".browse/images/setup-button.png";
-$default->search_url= "?".str_replace("&research","",$_SERVER["QUERY_STRING"])."&research";
-//
-function handle_request($dir){
-
-  $imgdir = $_SERVER["CFG"]["FOLDER"]["IMAGES"];
-  if(array_key_exists($_SERVER["CFG"]["REQUEST"]["SEARCH"],$_GET)){
-    search_async(str_replace([".browse/","/".$imgdir],"",$dir));
-    $url = "?0=.browse/".urlencode(preg_replace(["/^.browse\//","/".preg_quote($imgdir)."$/"],"",$dir)).$_SERVER["CFG"]["FOLDER"]["IMAGES"];
-    header("location: ./$url");
-    return false;
+  public function __construct($dir,$set=null){
+    $this->dir    = $dir;
+    $this->path   = substr($dir,strlen(".browse/"));
+    $this->docroot_path = $_SERVER["ROOT"].$dir;
+    $this->url    = urlencode($dir);
+    $this->urlq   = "?0=".$this->url;
+    $this->label  = utf8_encode(basename($dir));
+    
+    $this->set=$set;    
+    $this->set = new \stdClass;
+    $this->set->wallpaper = ".browse/images/fx_wallpaper.png";
+    $this->set->cast      = ".browse/images/fx_cast.jpg";
+    $this->set->logo      = ".browse/images/fx_logo.png";
+    $this->set->setup_image=".browse/images/setup-button.png";
+    $this->set->search_url= "?".str_replace("&research","",$_SERVER["QUERY_STRING"])."&research";
+    $this->set->switch_url =  "?0=".urlencode(str_replace([".browse/","/images",".browse"],"",$dir));
+    $this->set->form_target="_self";
+    $this->set->filter = preg_replace("/[[:cntrl:]]/","",strval(@$_REQUEST["filter"]));
+    $this->set->excludes = explode(";",$_SERVER["CFG"]["SETUP"]["EXCLUDE"]);
+    $this->set->path_menu = $this->print_path_menu($dir,true);
+    $this->set->form_open = "<form method=\"post\" action=\"?0={dir}\">";
+    $this->set->form_close= "<hr style=\"width:50%;clear:both\"/><input type=\"submit\"/></form>";
+    $this->set->folder    = "<a href=\"{url}\"><div class=\"folder {class}\">{folder}</div></a>";
+    $this->set->file      = "<div class=\"file {class}\"><a href=\"{url}\" target=\"{target}\">{file}</a>{input}</div>";
+    $this->set->image     = "<img src=\"{url}\" width=\"100%\" height=\"100%\" style=\"position:relative;opacity:1\"/>";
+    $this->set->menu = preg_match("/images$/",$dir) ? ' <input id="term" autocomplete="off" name="term" type="text" value="'.utf8_encode(str_replace(["/",".browse","images"]," ",$dir)).'"></input>
+      <input type="text" name="count" id="count" style="vertical-align:middle;width:24px;height:32px" value=5></input>
+      <input type="submit" value=" " 
+        onmouseover="document.forms[\'menu\'].term.style.backgroundColor=\'#000000\';"
+        onmouseout="document.forms[\'menu\'].term.style.backgroundColor=\'transparent\';"></input>' : "";
+    foreach(glob(".browse/images/fx_*") as $layout_item){
+      $basename = basename($layout_item);
+      $key = substr($basename,3,strpos($basename, "_",3)-3);
+      if($key){
+        $this->set->$key = urlencode($layout_item);
+        }
+      }
+    $this->renderer = [
+    "JPG" => "image_item",
+    "PNG" => "image_item",
+    "GIF" => "image_item",
+    "BMP" => "image_item"
+    ];
+    $this->stackoprints = [];
+    
+    $this->check_mirror();
     }
-  //
-  $dir = preg_replace("/^\.browse\//","",$dir);
-  if(preg_match("/\/images$/",$dir)){
-    $keys = ["cast","wallpaper","logo"];//todo:cfg auto_search_layout_keys
-    if(array_key_exists("customtype",$_POST)){
-      foreach($_POST["customtype"] as $idx => $ctype){
-        if(in_array($ctype,$keys)){
-          foreach(glob("$dir/fx_{$ctype}_*") as $oldfx){
-            unlink($oldfx);
-            }
-          copy($dir."/".$_POST["customfile"][$idx],$dir."/fx_".$ctype."_".$_POST["customfile"][$idx]);
-          if($ctype=="logo"){ 
-            foreach(glob($dir."/fx_cover*") as $oldcover){
-              unlink($oldcover);
+  public function __get($key){
+    if(isset($this->set,$key)){
+      return $this->set->$key;
+      }
+    }
+  public function __set($key,$val){
+    if(isset($this->set,$key)){
+      $this->set->$key=$val;
+      return true;
+      }
+      return false;
+    }
+  public function check_mirror(){
+    if($this->path && !is_dir($this->path)){
+      if(!mkdir($this->path)){
+        trace_log("folder_item.mkdir ./browse/".$this->path);
+        return;
+        }
+      }    
+    }
+  public function handle_request($path){
+    $dir = $path;
+    $imgdir = $_SERVER["CFG"]["FOLDER"]["IMAGES"];
+    if(array_key_exists($_SERVER["CFG"]["REQUEST"]["SEARCH"],$_GET)){
+      search_async(str_replace([".browse/","/".$imgdir],"",$dir));
+      $url = "?0=.browse/".urlencode(preg_replace(["/^.browse\//","/".preg_quote($imgdir)."$/"],"",$dir)).$_SERVER["CFG"]["FOLDER"]["IMAGES"];
+      header("location: ./$url");
+      return false;
+      }
+    //
+    $dir = preg_replace("/^\.browse\//","",$dir);
+    if(preg_match("/\/images$/",$dir)){
+      $keys = ["cast","wallpaper","logo"];//todo:cfg auto_search_layout_keys
+      if(array_key_exists("customtype",$_POST)){
+        foreach($_POST["customtype"] as $idx => $ctype){
+          if(in_array($ctype,$keys)){
+            foreach(glob("$dir/fx_{$ctype}_*") as $oldfx){
+              unlink($oldfx);
               }
-            create_preview("$dir/".$_POST["customfile"][$idx],"$dir/fx_cover_".$_POST["customfile"][$idx],256,256);
+            copy($dir."/".$_POST["customfile"][$idx],$dir."/fx_".$ctype."_".$_POST["customfile"][$idx]);
+            if($ctype=="logo"){ 
+              foreach(glob($dir."/fx_cover*") as $oldcover){
+                unlink($oldcover);
+                }
+              create_preview("$dir/".$_POST["customfile"][$idx],"$dir/fx_cover_".$_POST["customfile"][$idx],256,256);
+              }
             }
           }
         }
-      }
-    if(array_key_exists("delete",$_POST)){
-      foreach($_POST["delete"] as $idx => $name){
-        if(is_file($dir."/".$name)){
-          unlink($dir."/".$name);
+      if(array_key_exists("delete",$_POST)){
+        foreach($_POST["delete"] as $idx => $name){
+          if(is_file($dir."/".$name)){
+            unlink($dir."/".$name);
+            }
           }
         }
+      if(array_key_exists("term",$_POST)){
+        include_once(".browse/search.php");
+        search_engine_find($dir,"yahoo",$_POST["term"],$_POST["count"]);
+        }
       }
-    if(array_key_exists("term",$_POST)){
-      include_once(".browse/search.php");
-      search_engine_find($dir,"yahoo",$_POST["term"],$_POST["count"]);
+    }
+  public function print_start(){
+    $dir = $this->dir;$return=false;
+    $html  = $_SERVER["CFG"]["PAGE"];
+    $print = substr($html,0,strpos($html,"{content}"));
+    if(preg_match("/images$/",$dir))$print.= str_replace("{dir}",urlencode($dir),$this->form_open);
+    return $return ? $print : ((print $print) ? "" : "error:$path\n");
+    }
+  public function print_end(){
+    $dir = $this->dir;$return = false;
+    $html  = $_SERVER["CFG"]["PAGE"];
+    $print = "";
+    foreach($this->stackoprints as $item){
+      $print.= $item;
       }
+    if(preg_match("/images$/",$dir))$print .= $this->form_close;
+    $print .= substr($html,strpos($html,"{content}")+strlen("{content}"));
+    return $return ? $print : ((print $print) ? "" : "error:$path\n");
     }
-  }
-//
-$page = new \stdClass();
-$page->form_target="_self";
-$page->path = $dir; //$dir kommt vom includer !!!
-$page->path_menu = path_menu($page->path);
-$page->menu = preg_match("/images$/",$dir) ? ' <input id="term" autocomplete="off" name="term" type="text" value="'.utf8_encode(str_replace(["/",".browse","images"]," ",$dir)).'"></input>
-  <input type="text" name="count" id="count" style="vertical-align:middle;width:24px;height:32px" value=5></input>
-  <input type="submit" value=" " 
-    onmouseover="document.forms[\'menu\'].term.style.backgroundColor=\'#000000\';"
-    onmouseout="document.forms[\'menu\'].term.style.backgroundColor=\'transparent\';"></input>' : "";
-$page->switch_url =  "?0=".urlencode(str_replace([".browse/","/images",".browse"],"",$dir));
-$page->url =  "?0=".urlencode($dir) ;
-//
-foreach(glob(".browse/images/fx_*") as $layout_item){
-  $basename = basename($layout_item);
-  $key = substr($basename,3,strpos($basename, "_",3)-3);//todo:getridoff fx_ cause images get saved in their srcfilename so id is <fetchtype>_ ... conflict is ok...
-  if($key){
-    $page->$key = urlencode($layout_item);
-    }
-  }
-//
-//set default
-if(!is_object($page)){
-  $page = &$default;
-  trace_log(basename(__FILE__)." no defined pagelayout \$page");
-  }
-else{
-  foreach($default as $key => $val){
-    if(!property_exists($page,$key)){
-      $page->$key = $val;
+  public function print_path_menu($path,$return=false){
+    $item="<a href=\"/\"><b>&nbsp;&lArr;&nbsp;</b></a>";
+    $c = "";
+    foreach(explode("/",$path) as $f){
+      $item .= "<a href=\"?0=".urlencode($c.$f)."\">&nbsp;".utf8_encode($f)."&nbsp;</a>";
+      $c .= $f."/";
       }
-  }
-  if(preg_match("/".preg_quote($_SERVER["CFG"]["REQUEST"]["SEARCH"])."/",$page->setup_url)){
-    $page->setup_image=".browse/images/search-button.png"; 
+    return $return ? $item : ((print $item) ? "" : "error:$path\n");
     }
-  }
-function start($dir,$return = false){
-  $html  = $_SERVER["CFG"]["PAGE"];
-  $print = substr($html,0,strpos($html,"{content}"));
-  if(preg_match("/images$/",$dir))$print.= str_replace("{dir}",urlencode($dir),form_open);
-  return $return ? $print : (print $print);
-  }
-function end($dir,$return = false){
-  $html  = $_SERVER["CFG"]["PAGE"];
-  $print = "";
-  foreach($_SERVER["RESPONSE"]["STACK"] as $item){
-    $print.= $item;
-    }
-  if(preg_match("/images$/",$dir))$print .= form_close;
-  $print .= substr($html,strpos($html,"{content}")+strlen("{content}"));
-  return $return ? $print : (print $print);
-  }
-function item($innerHtml,$return=false){
-  return $return ? $innerHtml : (print $innerHtml);
-  }
-//
-function folder_item($path,$return=false){
-  $url  = urlencode(substr($path,strlen($_SERVER["ROOT"].".browse/")));
-  $label= utf8_encode(str_replace(["_","."]," ",basename($path)));
-  $item =  "<a href=\"?0=.browse/$url\"><div class=\"folder\">$label</div></a>";
-  return $return ? $item : (print $item);
-  }
-function file_item($path,$return=false){ 
-  $url = urlencode(substr($path,strlen($_SERVER["ROOT"].".browse/")));
-  $label= utf8_encode(str_replace(["_","."]," ",basename($path)));
-  $label = substr($label,0,strlen($label)-4);
-  $ext = strtolower(substr($url,-3));
-  if(array_key_exists($ext,$_SERVER["CFG"]["RENDERER"])){
-    $fx = "\\render\\".$_SERVER["CFG"]["RENDERER"][$ext];
-    $item = $fx($url,$label,true);    
-    }
-  elseif($ext!="php"){ 
-    $item =  "<a href=\".browse/file.php?0=$url\" target=\"_self\"><div class=\"file\">$label</div></a>";    
-    }
-  else{
-    $item  ="";
-    }
+  public function print_file($path,$return = false){
+    $url = urlencode(substr($path,strlen($_SERVER["ROOT"].".browse/")));
+    $label= utf8_encode(str_replace(["_","."]," ", substr(basename($path),0,-4)));
+    $ext = strtoupper(substr($path,-3));
+    if(array_key_exists($ext,$this->renderer)){
+      $fx = "\\render\\".$this->renderer[$ext];
+      $item = $fx($url,$label,true);    
+      }
+    elseif($ext!="php"){ 
+      $item =  "<a href=\".browse/file.php?0=$url\" target=\"_self\"><div class=\"file\">$label</div></a>";    
+      }
+    else{
+      $item  ="";
+      }
 
-  return $return ? $item : (print $item);
-  }
-function image_item($url,$label,$return=false){
-  $input = "<div  style=\"position:absolute;margin-top:-24px;width:100%;z-index:1;padding-top:-32px;background:grey\">&nbsp;</div>";
-  $label = "<img src=\"".$url."\" width=\"100%\" height=\"100%\" style=\"position:relative;opacity:1\"/>";
-  $filename = basename(urldecode($url));
-  if(preg_match("/images$/",dirname(urldecode($url)))){
-    $input = "<div  style=\"position:absolute;margin-top:-24px;width:100%;z-index:1;padding-top:-32px;background:grey\">
-    <div title=\"delete\" style=\"float:right;height:24px;width:32px;position:relative;text-align:center\">
-    <img src = '.browse/images/delete-button.png' width=\"24px\" height=\"100%\" style=\"float:left\"/>
-    <input type=\"checkbox\" name=\"delete[]\" value=\"".$filename."\" style=\"position:absolute;left:16px;width:24px;height:24px;background:transparent;border:0\"/>
-    </div>";
-    if(preg_match("/^fx_(cast|wallpaper|logo)/",$filename,$m)){//todo:CFG
-      $type    = $m[1] ;
-      if($type)
-        $input .= $type;
-    }elseif(!preg_match("/^fx_cover/",$filename,$m)){
-        $input .= "<input type=\"hidden\" name=\"customfile[]\" value=\"".$filename."\"/><select name=\"customtype[]\"><option></option><option>logo</option><option>cast</option><option>wallpaper</option></select>";              
-      }else{
-        $input .= "";
+    return $return ? $item : ((print $item) ? "" : "error:$path\n");
+    }
+  public function print_folder($path,$return = false){
+    $url  = urlencode(substr($path,strlen($_SERVER["ROOT"])));
+    $label= utf8_encode(str_replace(["_","."]," ",basename($path)));
+    $item =  "<a href=\"?0=$url\"><div class=\"folder\">$label</div></a>";
+    return $return ? $item : ((print $item) ? "" : "error:$path\n");
+    }
+  public function print_image($path,$return = false){
+    $url = $path;
+    $input = "<div  style=\"position:absolute;margin-top:-24px;width:100%;z-index:1;padding-top:-32px;background:grey\">&nbsp;</div>";
+    $label = "<img src=\"".$url."\" width=\"100%\" height=\"100%\" style=\"position:relative;opacity:1\"/>";
+    $filename = basename(urldecode($url));
+    if(preg_match("/images$/",dirname(urldecode($url)))){
+      $input = "<div  style=\"position:absolute;margin-top:-24px;width:100%;z-index:1;padding-top:-32px;background:grey\">
+      <div title=\"delete\" style=\"float:right;height:24px;width:32px;position:relative;text-align:center\">
+      <img src = '.browse/images/delete-button.png' width=\"24px\" height=\"100%\" style=\"float:left\"/>
+      <input type=\"checkbox\" name=\"delete[]\" value=\"".$filename."\" style=\"position:absolute;left:16px;width:24px;height:24px;background:transparent;border:0\"/>
+      </div>";
+      if(preg_match("/^fx_(cast|wallpaper|logo)/",$filename,$m)){//todo:CFG
+        $type    = $m[1] ;
+        if($type)
+          $input .= $type;
+      }elseif(!preg_match("/^fx_cover/",$filename,$m)){
+          $input .= "<input type=\"hidden\" name=\"customfile[]\" value=\"".$filename."\"/><select name=\"customtype[]\"><option></option><option>logo</option><option>cast</option><option>wallpaper</option></select>";              
+        }else{
+          $input .= "";
+        }
+        $input.="</div>";
       }
-      $input.="</div>";
-    }
-  $item =  "<div class=\"file image\"><a href=\"$url\" target=\"_self\">$label</a>$input</div>";
+    $item =  "<div class=\"file image\"><a href=\"$url\" target=\"_self\">$label</a>$input</div>";
 
-  return $return ? $item : (print $item);
-  }
-function path_menu($dir=""){
-  $html="<a href=\"/\"><b>&nbsp;&lArr;&nbsp;</b></a>";
-  $c = "";
-  foreach(explode("/",$dir) as $f){
-    $html .= "<a href=\"?0=".urlencode($c.$f)."\">&nbsp;".utf8_encode($f)."&nbsp;</a>";
-    $c .= $f."/";
+    return $return ? $item : ((print $item) ? "" : "error:$path\n");
+
     }
-  return $html;
   }
 
-/*
-?>
-*/
-$_SERVER["CFG"]["PAGE"] = <<<PAGE
-<!DOCTYPE html>
-<html id="background"><head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<meta charset="utf-8"/>
-<title>Media-Browser</title>
-<meta http-equiv="cache-control" content="max-age=0" />
-<meta http-equiv="cache-control" content="no-cache" />
-<meta http-equiv="expires" content="0" />
-<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT" />
-<meta http-equiv="pragma" content="no-cache" />
-<style>
+$page = new folder($dir);
+//$page->print_page();
+//-------------------------------------------------------
+$GLOBALS["PAGE"] = &$page;
+
+function handle_request($dir){
+  return $GLOBALS["PAGE"]->handle_request($dir);
+  }
+function start(){
+  return $GLOBALS["PAGE"]->print_start();
+  }
+function end(){
+  return $GLOBALS["PAGE"]->print_end();
+  }
+function file_item($dir){
+   return $GLOBALS["PAGE"]->print_file($dir); 
+  }
+function folder_item($dir){
+   return $GLOBALS["PAGE"]->print_folder($dir); 
+  }
+function image_item($dir){
+   return $GLOBALS["PAGE"]->print_image($dir); 
+  }
+//-------------------------------------------------------
+
+$style = <<<STYLE
 *{
   margin:0;padding:0;
   color:#ffffff;
@@ -274,10 +305,7 @@ $_SERVER["CFG"]["PAGE"] = <<<PAGE
   position:absolute;
   overflow:auto;
   }
-#setup_switch{
-  position:absolute;
-  right:0;
-  top:0;
+#mirror_switch{
   margin:4px;
   width:32px;
   height:32px
@@ -337,7 +365,20 @@ $_SERVER["CFG"]["PAGE"] = <<<PAGE
   width:32px;
   height:32px;  
   }
-</style>
+STYLE;
+
+$_SERVER["CFG"]["PAGE"] = <<<PAGE
+<!DOCTYPE html>
+<html id="background"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="utf-8"/>
+<title>Media-Browser</title>
+<meta http-equiv="cache-control" content="max-age=0" />
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="expires" content="0" />
+<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT" />
+<meta http-equiv="pragma" content="no-cache" />
+<style>$style</style>
 <script></script>
 </head>
 <body>
@@ -347,21 +388,23 @@ $_SERVER["CFG"]["PAGE"] = <<<PAGE
     <table id="layout">
     <tbody>
     <tr>
-      <td class="menu-panel"><img id="logo" src=".browse/images/fx_logo.png"/>
-      </td>
-      <td class="menu-panel" colspan="2">
-      <form name="menu" method="post" action="$page->url" target="$page->form_target" accept-charset="utf-8"><div>
-        $page->menu
-        <a href="$page->switch_url"><img src=".browse/images/menu-button.png" style="margin:8px;width:32px;height:32px"></img></a>
-      </div></form>
-      </td>
-      </tr>
+    <td class="menu-panel"><img id="logo" src=".browse/images/fx_logo.png"/>
+    </td>
+    <td class="menu-panel" colspan="2">
+    <form name="menu" method="post" action="$page->urlq" target="$page->form_target" accept-charset="utf-8">
+    <div>
+      $page->menu
+      <a href="$page->switch_url"><img id="mirror_switch" src=".browse/images/menu-button.png"></img></a>
+    </div>
+    </form>
+    </td>
+    </tr>
     <tr>
-      <td id="content-panel" colspan="3"><div id="auto">{content}</div></td>         
-      </tr>
+    <td id="content-panel" colspan="3"><div id="auto">{content}</div></td>         
+    </tr>
     <tr >
-      <td id="navigation-panel" colspan="3"><h3>$page->path_menu</h3></td>
-      </tr>
+    <td id="navigation-panel" colspan="3"><h3>$page->path_menu</h3></td>
+    </tr>
     </tbody>
     </table>
   </div>

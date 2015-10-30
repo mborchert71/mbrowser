@@ -18,13 +18,16 @@ function route_file($file,$return=false){
   file_finish_handle($file);
   }
 //
-function render_folder($dir,$return=false){
-  $CONTENT = ["FOLDER","SETUP","ROOT"][ !$dir ? 2 : intval(preg_match("/^\.browse/",$dir))];
+function route_folder($dir,$return=false){
+  $CONTENT = ["FOLDER","SETUP","ROOT"][ !$dir ? 2 : intval(preg_match("/^\.browse/",$dir))];//todo:
   $RENDER  = ["\\render\\file_item","\\render\\folder_item"];
   $FILTER  = preg_replace("/[[:cntrl:]]/","",strval(@$_REQUEST["filter"]));
   $EXCLUDE = explode(";",$_SERVER["CFG"][$CONTENT]["EXCLUDE"]);
   //
   include($_SERVER["CFG"][$CONTENT]["RENDERER"]);
+
+  /*dev*/if($CONTENT=="SETUP" && @$_GET["hitme"]){include(".browse/setup/renderer.php");return;}
+
   $print  = render\handle_request($dir,$return);
   $print .= render\start($dir,$return) ;
   //
@@ -42,6 +45,6 @@ function run(){
   include(".browse/head.php");
   $r=($_SERVER["ROOT"]    ="../");
   $p=($_REQUEST["PATH"]   =[(array_key_exists("0",$_GET) ? $_GET[0] : "")]);
-  $q=($_SERVER["RESPONSE"]= is_dir($r.$p[0]) ?render_folder($p[0]) :route_file($p[0]));
+  $q=($_SERVER["RESPONSE"]= is_dir($r.$p[0]) ?route_folder($p[0]) :route_file($p[0]));
   include(".browse/feet.php");
   }

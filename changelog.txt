@@ -24,13 +24,12 @@
 28.10.2015 12:54:29,33	mkdir .browse/mirror onEnter
 28.10.2015 17:01:58,88	search yahoo! improvements, form in .browse/*/images
 28.10.2015 20:01:47,08	sample environment .browse/.browse
-	layout_php zu class render komprimieren
-	setup encode decode desaster
-	includer $dir in *layout.php
-	Cfg Folder Images rename Setup Images
-	getridof fx_
+29.10.2015 13:55:15,54	layout_php zu class render komprimieren
+
 	search chaos
-	most common mime types renderer text,image,video,audio,... or lets say film stripes for video
+	Cfg Folder Images rename Setup Images, konsequent im gesamten programm CFG einsetzen
+	rename fx_ to __.*, konsequent im ganzen Programm CFG einsetzen
+	compress class folder to prototype folder, root folder setup extend upon
 
 ----github--update-------------------------------------------------------------------------------------------
 	global.ini to form
