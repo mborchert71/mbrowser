@@ -1,0 +1,1 @@
+start "" /SEPARATE /NORMAL /B php .browse/system/cli-search.php %1 > NUL
