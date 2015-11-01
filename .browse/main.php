@@ -20,6 +20,7 @@ function route_file($file,$return=false){
 //
 function route_folder($dir,$return=false){
   include($_SERVER["CFG"][["FOLDER","SETUP","ROOT"][ !$dir ? 2 : intval(preg_match("/^\.browse/",$dir))]]["RENDERER"]);
+  (new page($dir))->full_print();
   }
 //
 function run(){

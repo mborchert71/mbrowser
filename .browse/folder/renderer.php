@@ -1,20 +1,61 @@
 <?php
 
 class page{
-  public $dir;
-  public $path;
-  public $docroot;
-  public $url;
-  public $urlq;
-  public $label;
-  public $set;
-  public $renderer= [];
-  public $stackoprints=[];
-  public $content_hook;
-  public $xml;
-  public function __construct($dir,$xml,$opt=null){
-    $this->dir = $dir;
-    $this->xml = new SimpleXMLElement($xml,null,true);
+  public $docroot;          //relative_path
+  public $dir;              //as requested
+  public $path;             //relative_path
+  public $url;              //encoded
+  public $urlq;             //standard query ?0=docroot/path
+  public $label;            //utf8_encoded
+  public $my;               //global.ini SETUP section
+  public $cfg;              //global.ini
+  public $set;              //maybe changing varname vars
+  public $stackoprints=[];  //stack of content
+  public $content_hook;     //SimpleXMLElement
+  public $xml;              //htm template
+  public $css;              //css style
+  public function __construct($dir){
+    //
+    $this->docroot= $_SERVER["ROOT"];
+    $this->cfg    = &$_SERVER["CFG"];
+    $this->my     = &$_SERVER["CFG"]["FOLDER"];
+    $this->dir    = $dir;
+    $this->path   = $dir;//see setup/renderer
+    $this->url    = urlencode($dir);
+    $this->urlq   = "?0=".$this->url;
+    $this->label  = utf8_encode(basename($dir));
+    //
+    $this->set = new stdClass;
+    $this->set->site_title  = $this->my["SITE_TITLE"];
+    $this->set->wallpaper   = $this->my["FX_WPAPER"];
+    $this->set->cast        = $this->my["FX_CAST"];
+    $this->set->logo        = $this->my["FX_LOGO"];
+    $this->set->exclude     = explode(" ",$this->my["EXCLUDE"]);
+    $this->set->mr_images   = $this->cfg["SETUP"]["IMAGES"];
+    $this->set->mirror_fifo = glob($this->path."/*");
+    $this->set->renderer = $this->cfg["RENDERER"];
+    //
+    $this->xml = new SimpleXMLElement($this->my["SITE"],null,true);
+    $this->css = file_get_contents($this->my["STYLE"]);
+    //brand  layout
+    $pos = strlen(FX);
+    foreach(glob(substr($this->path,0,strpos($this->path,I)).I.$this->mr_images.I.FX."*") as $layout_item){
+      $basename = basename($layout_item);
+      $key = substr($basename,$pos,strpos($basename, "_",$pos)-$pos);
+      if($key){
+        $this->set->$key = urlencode($layout_item);
+        }
+      }
+    //subpage layout
+    foreach(glob($dir.I.$this->mr_images.I.FX."*") as $layout_item){
+      $basename = basename($layout_item);
+      $key = substr($basename,$pos,strpos($basename, "_",$pos)-$pos);
+      if($key){
+        $this->set->$key = urlencode($layout_item);
+        }
+      }
+    //
+    $this->check_mirror();
     }
   public function __get($key){
     if(isset($this->set,$key)){
@@ -30,78 +71,36 @@ class page{
     }
   public function check_mirror(){
     if(!$this->path){
-      trace_log("folder_item.mkdir empty \$path");
+      trace_log("folder_item.mkdir empty ".$this->path);
       return;
       }
-    $images = DIRECTORY_SEPARATOR.$_SERVER["CFG"]["SETUP"]["IMAGES"];
     if(!is_dir($this->path)){
       if(!mkdir($this->path)){
-        trace_log("check_mirror.mkdir .browse/".$this->path);
+        trace_log("check_mirror.mkdir <mirror>/".$this->path);
         return;
         }
-      if(basename($this->path)!=$images){
-        @mkdir($this->path.$images);
+      if(basename($this->path)!=$this->mr_images){
+        @mkdir($this->path.I.$this->mr_images);
         }
       return;
       }
-    if(!is_dir($this->path.$images)){
-      if(!mkdir($this->path.$images)){
-        trace_log("check_mirror.mkdir .browse/".$this->path);
+    if(!is_dir($this->path.I.$this->mr_images)){
+      if(!mkdir($this->path.I.$this->mr_images)){
+        trace_log("check_mirror.mkdir <mirror>/".$this->path);
         return;
         }
       }
     }
-  public function handle_request($path){
-
+  public function handle_request(){
+    $this->set->filter = ""; //preg_replace("/[[:cntrl:]]/","",strval(@$_REQUEST["filter"]));
     }
-  public function setBasics(){
-    $dir = $this->dir ;
-    $this->docroot = $_SERVER["ROOT"];
-    $this->path   = $dir;
-    $this->url    = urlencode($dir);
-    $this->urlq   = "?0=".$this->url;
-    $this->label  = utf8_encode(basename($dir));
-      
-    $this->set = new stdClass;
-    $this->set->wallpaper = ".browse/images/fx_wallpaper.png";
-    $this->set->cast      = ".browse/images/fx_cast.jpg";
-    $this->set->logo      = ".browse/images/fx_logo.png";
-
-    //brand  layout
-    foreach(glob(substr($dir,0,strpos($dir,"/"))."/images/fx_*") as $layout_item){
-      $basename = basename($layout_item);
-      $key = substr($basename,3,strpos($basename, "_",3)-3);//todo:strlen {fx}
-      if($key){
-        $this->set->$key = urlencode($layout_item);
-        }
-      }
-    //subpage layout
-    foreach(glob("$dir/images/fx_*") as $layout_item){
-      $basename = basename($layout_item);
-      $key = substr($basename,3,strpos($basename, "_",3)-3);//todo:strlen {fx}
-      if($key){
-        $this->set->$key = urlencode($layout_item);
-        }
-      }
-
-    $this->set->filter = preg_replace("/[[:cntrl:]]/","",strval(@$_REQUEST["filter"]));
-    $this->set->excludes = explode(";",$_SERVER["CFG"]["SETUP"]["EXCLUDE"]);
-
-    $this->renderer = [
-    "JPG" => "addImage",
-    "PNG" => "addImage",
-    "GIF" => "addImage",
-    "BMP" => "addImage"
-    ];
-    $this->stackoprints = [];
-    
-    $this->check_mirror();
+  public function addBasics(){
 
     $title  = $this->xml->xpath("/html/head/title");
-    $title[0][0] = "Media Browser";
+    $title[0][0] = $this->set->site_title;
 
     $style       = $this->xml->xpath("/html/head/style");
-    $style[0][0] = file_get_contents('.browse/folder/style.css');
+    $style[0][0] = $this->css;
 
     $design   = $this->xml->xpath("/html/body/img");
     $design[0]->attributes()["src"] = $this->set->wallpaper;
@@ -121,15 +120,15 @@ class page{
     $menu->addAttribute("target","_self");
     $menu->addAttribute("accept-charset","utf-8");
     
-    if(preg_match("/".preg_quote($_SERVER["CFG"]["SETUP"]["IMAGES"])."/",$this->url)){
+    if(preg_match("/".preg_quote($this->mr_images)."/",$this->url)){
       $this->addMenu($menu,$this->path);
       }
 
     $mirror_switch = $menu->addChild("a");
-    $mirror_switch->addAttribute("href","?0=.browse/".urlencode($dir));
+    $mirror_switch->addAttribute("href","?0=".MIRROR."/".urlencode($this->dir));
     $img = $mirror_switch->addChild('img');
     $img->addAttribute("id","mirror_switch");
-    $img->addAttribute("src",".browse/images/setup-button.png");
+    $img->addAttribute("src",MIRROR."/images/setup-button.png");
     //2
     //3
     $content = $cell[4]->addChild("div");
@@ -139,7 +138,7 @@ class page{
     //6
     $navi = $cell[7]->addChild("h3");
     $navi->addAttribute("class","navi");
-    $this->addNavi($navi,$dir);
+    $this->addNavi($navi,$this->dir);
     //8
     }
   public function addNavi(SimpleXMLElement &$e,$path){
@@ -158,7 +157,7 @@ class page{
     $m->addAttribute("name","term");
     $m->addAttribute("autocomplete","off");
     $m->addAttribute("type","text");
-    $m->addAttribute("value",utf8_encode(str_replace(["/",$_SERVER["CFG"]["SETUP"]["IMAGES"]]," ",$path)));
+    $m->addAttribute("value",utf8_encode(str_replace(["/",$this->mr_images]," ",$path)));
     
     $m = $e->addChild("input");
     $m->addAttribute("id","count");
@@ -182,7 +181,7 @@ class page{
     $args   = ["addFile",null];
 
     foreach(glob($path_expression) as $fifo){
-      if(!in_array($fifo,$excludes)){
+      if(!in_array($fifo,$this->exclude)){
         $idx = intval(is_dir($fifo));
         $this->$router[$idx]($e,$fifo,$args[$idx]);
         }
@@ -199,7 +198,7 @@ class page{
       $this->$render($e,$path);    
       }
     elseif($ext!="php"){
-      $cover = @array_pop(glob(dirname($path).DIRECTORY_SEPARATOR.$_SERVER["CFG"]["SETUP"]["IMAGES"].DIRECTORY_SEPARATOR."fx_".basename($path)."*"));
+      $cover = @array_pop(glob(dirname($path).I.$this->mr_images.I.FX.basename($path)."*"));
       $label = utf8_encode(str_replace(["_","."]," ", substr(basename($path),0,-4)));
       $link = $e->addChild("a");
       $link->addAttribute("href","?0=".urlencode($path));
@@ -220,7 +219,7 @@ class page{
   public function addFolder(SimpleXMLElement &$e,$path){
     $path = substr($path,strlen($this->docroot));
     $label = utf8_encode(str_replace(["_","."]," ",basename($path)));
-    $cover = @array_pop(glob($path."/".$_SERVER["CFG"]["SETUP"]["IMAGES"]."/".$_SERVER["CFG"]["FOLDER"]["FX_COVER"]."*"));
+    $cover = @array_pop(glob($path."/".$this->mr_images."/".FX.COVER."*"));
 
     $link = $e->addChild("a");
     $link->addAttribute("href","?0=".urlencode($path));
@@ -242,17 +241,15 @@ class page{
     $box = $e->addChild("div");
     $box->addAttribute("class","file image");
     $link = $box->addChild("a");
-    $link->addAttribute("href",".browse/file.php?0=".$this->docroot.urlencode($path));
+    $link->addAttribute("href",MIRROR."/file.php?0=".$this->docroot.urlencode($path));
     $img = $link->addChild("img");
-    $img->addAttribute("src",".browse/file.php?0=".$this->docroot.urlencode($path));
+    $img->addAttribute("src",MIRROR."/file.php?0=".$this->docroot.urlencode($path));
 
     }
   public function full_print(){
-    $this->setBasics($this->dir);
+    $this->handle_request();
+    $this->addBasics();
     $this->addGlob($this->content_hook,$this->docroot.$this->dir.$this->filter."/*");
     print $this->xml->asXML();
     }
   }
-
-
-(new page($dir,".browse/setup/page.htm"))->full_print();
