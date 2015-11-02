@@ -111,11 +111,31 @@ function search_async($path){
   list($server,$term,$fetch,$tags,$count)=$param;
   search_engine_fetch($server,$term,$fetch,$tags,$count);  
   }
-//FILES
-function search_single($name){
-  include_once($this->cfg["UTIL"]["SEARCH_FILE"]);
-  search_engine_single("yahoo",utf8_encode($name),"poster"); 
+function search_engine_start($term,$fetch=["wallpaper","cast","logo"]){
+  //
+  if(array_key_exists("fetch",$_GET)){
+    $fetch = $_GET["fetch"];
+    }
+  $imgdir = "$term/".$_SERVER["CFG"]["SETUP"]["IMAGES"];
+  if(!is_dir($imgdir))if(!mkdir($imgdir)){
+      trace_log("search_engine_start.mkdir $imgdir");
+      return false;
+    }
+  else{
+    @copy(".browse/images/dummy_cast.jpg","$imgdir/dummy_cast.jpg");
+    }
+  //
+  $server = "yahoo";
+  $title = array_key_exists("title",$_REQUEST)? $_REQUEST["title"] : "";
+  $count = array_key_exists("count",$_REQUEST) ? intval($_REQUEST["count"]) : 1;
+  $tags = "(".str_replace(" "," OR ",trim("{type} ".$_SERVER["CFG"]["ROOT"]["TAGS"]." ".(array_key_exists("tags",$_REQUEST) ? $_REQUEST["tags"] : ""))).")".'"'.urlencode($title).'"';
+  //
+  return [$server,$term,$fetch,$tags,$count];
   }
+
+  
+//FILES
+
 function file_request_handle($fifo){
   $name = basename(substr($fifo,0,strlen($fifo)-4));//files to root restriction
   if(array_key_exists("research",$_REQUEST)){
@@ -135,5 +155,68 @@ function file_finish_handle($fifo){
       }
     }
   }
-
+//
+function handle_request($path){
+  if(array_key_exists($_SERVER["CFG"]["SEARCH"],$_GET)){
+    $term = $_GET[$_SERVER["CFG"]["TERM"]];
+    //
+    if(is_file("../$path")){
+      $imgdir = $_SERVER["CFG"]["SETUP"]["IMAGES"];
+      }
+    elseif($path && !is_dir($path)){
+      if(!mkdir($path)){
+        trace_log("search_engine_start.mkdir $path");
+        return false;
+        }
+      else{
+        $imgdir = $path.I.$_SERVER["CFG"]["SETUP"]["IMAGES"];
+        }
+      }
+    else{
+      $imgdir = $path.I.$_SERVER["CFG"]["SETUP"]["IMAGES"];
+      }
+    include_once($_SERVER["CFG"]["UTIL"]["SEARCH_FILE"]);
+    if(!is_dir($imgdir)){
+      if(!mkdir($imgdir)){
+        trace_log("search_engine_start.mkdir $imgdir");
+        return false;
+        }
+      }
+    $m = search_engine_request($_SERVER["CFG"]["UTIL"]["SEARCH_SERVER"],urlencode($term."(".str_replace(" "," OR ",$_SERVER["CFG"]["ROOT"]["TAGS"]).")"));
+    $c = @count($m);
+    if(!count($m)){
+      trace_log("search_engine_find found zero $term");
+      return "";
+      }
+    for($i=0;$i<$c;$i++){
+      $img = "http://".htmlspecialchars(urldecode($m[$i]));
+      $ext = strtolower(substr($img,-3));
+      try{
+        $file = file_get_contents($img);
+        break;
+        }
+      catch(Exception $e){
+        trace_log("search_engine_fetch.file_get_contents $img");
+        } 
+      }
+    if(!$file){
+      trace_log("search_engine_fetch none");
+      }
+    else{
+      $newImage= $imgdir.I.$term.".".$ext;
+      if(!file_put_contents($newImage,$file)){
+        trace_log("search_engine_single.file_put_contents $img");
+        return "";
+      }else{
+        @file_put_contents(
+        dirname($imgdir).I.$_SERVER["CFG"]["SETUP"]["FETCH_LOG"],"$term.$ext\t{$img}\n",FILE_APPEND );
+        $preview =$imgdir.I.FX.COVER."_".$term.".".$ext;
+        $width   =$_SERVER["CFG"]["SETUP"]["PREVIEW_MAX_WIDTH"];
+        $height  =$_SERVER["CFG"]["SETUP"]["PREVIEW_MAX_HEIGHT"];
+        create_preview($newImage,$preview,$width,$height);
+        }
+      }
+    header("location: ./#".md5($term));
+    }
+  }
 ?>

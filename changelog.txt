@@ -31,18 +31,19 @@
 01.11.2015 10:58:36,07	cfg in global.ini einpflegen
 01.11.2015 18:15:18,79	*/images submit button into navi panel, active_fx first
 01.11.2015 23:09:14,44	frontpage gepimpt und page.htm wie folder und setup
-	search
-	loading animation
+02.11.2015 16:50:42,03	improved rootpage cover-search, rootfiles now reside to cfg->images
+
 	maintain : rename , convert , waisen , remove images clean fetch list tag:removed
 ----github--update-------------------------------------------------------------------------------------------
 ----linux--execution-test------------------------------------------------------------------------------------
+	automatisierung I ( layout , format )
+----github--update-------------------------------------------------------------------------------------------
+	localization
+	filebrowser ops I  create,delete,rename 
+----github--beta-release-------------------------------------------------------------------------------------
 	sort year
 	play_list
 	play_next
-	automatisierung I ( layout , format )
-----github--update-------------------------------------------------------------------------------------------
-	filebrowser ops I  create,delete,rename 
-----github--beta-release-------------------------------------------------------------------------------------------
 	test-units
 	filebrowser ops II move,copy,paste
 	filebrowser ops III drag n drop

@@ -27,6 +27,7 @@ function run(){
   include(".browse/head.php");
   $r=($_SERVER["ROOT"]    ="../");
   $p=($_REQUEST["PATH"]   =[(array_key_exists("0",$_GET) ? $_GET[0] : "")]);
+  handle_request($p[0]);
   $q=($_SERVER["RESPONSE"]= is_dir($r.$p[0]) ?route_folder($p[0]) :route_file($p[0]));
   include(".browse/feet.php");
   }

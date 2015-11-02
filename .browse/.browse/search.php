@@ -12,19 +12,22 @@ function search_engine_find($dir,$server,$term,$count=5){
     trace_log("search_engine_find called from non images folder $dir");
     return false;
     }
-  $saved = 0;
-  $logfile = dirname($dir)."/fetch.log";
+  $logfile = dirname($dir).$_SERVER["CFG"]["SETUP"]["FETCH_LOG"];
   $src = [];
   $handle = fopen($logfile, "a+");
-  if($handle)while (($data = fgetcsv($handle, 1024, "\t")) !== FALSE) {
+  if($handle){
+    while(($data = fgetcsv($handle, 1024, "\t")) !== FALSE) {
       $src[] = $data[1];
-    }  
+      }
+    }
   fclose($handle);
   //
   set_time_limit ( $count*30 );
+  $saved = 0;
   $m = search_engine_request($server,urlencode($term));
+  $c = @count($m);
   //
-  for($i=0;$i<@count($m);$i++){
+  for($i=0;$i<$c;$i++){
     $img = "http://".htmlspecialchars(urldecode($m[$i]));
     if(!in_array($img,$src)){
       $src[] = $img;
@@ -58,62 +61,8 @@ function search_engine_find($dir,$server,$term,$count=5){
   if(!$saved){ trace_log("search_engine_find\tfound zero\t$dir $term"); }
   return $saved;
 }
-function search_engine_start($term,$fetch=["wallpaper","cast","logo"]){
-  //
-  if(array_key_exists("fetch",$_GET)){
-    $fetch = $_GET["fetch"];
-    }
-  $imgdir = "$term/".$_SERVER["CFG"]["SETUP"]["IMAGES"];
-  if(!is_dir($imgdir))if(!mkdir($imgdir)){
-      trace_log("search_engine_start.mkdir $imgdir");
-      return false;
-    }
-  else{
-    @copy(".browse/images/dummy_cast.jpg","$imgdir/dummy_cast.jpg");
-    }
-  //
-  $server = "yahoo";
-  $title = array_key_exists("title",$_REQUEST)? $_REQUEST["title"] : "";
-  $count = array_key_exists("count",$_REQUEST) ? intval($_REQUEST["count"]) : 1;
-  $tags = "(".str_replace(" "," OR ",trim("{type} ".$_SERVER["CFG"]["ROOT"]["TAGS"]." ".(array_key_exists("tags",$_REQUEST) ? $_REQUEST["tags"] : ""))).")".'"'.urlencode($title).'"';
-  //
-  return [$server,$term,$fetch,$tags,$count];
-  }
-function search_engine_single($server,$term,$type){
-  $m = search_engine_request($server,$term,$type);
-  if(!count($m))return "";
-  for($i=0;$i<count($m);$i++){
-    $img = "http://".htmlspecialchars(urldecode($m[$i]));
-    $ext = strtolower(substr($img,strlen($img)-3));
-    try{
-      $file = file_get_contents($img);
-      $i = count($m);
-      break;}
-    catch(Exception $e){
-      trace_log("search_engine_fetch.file_get_contents $img");
-    } 
-  }
-  if(!$file){
-    trace_log("search_engine_fetch.file_get_contents $img");
-    }
-  else{
-    if(!is_dir(".file")){mkdir(".file");}
-    
-    $newImage=".file/{$term}.{$ext}";
-    
-    if(!file_put_contents($newImage,$file)){
-      trace_log("search_engine_single.file_put_contents $img");
-      return "";
-    }else{
-      @file_put_contents(".file/fetch.log","{$term}.{$ext}\t{$img}\n",FILE_APPEND );
-      create_preview($newImage,str_replace(".file/",".file/fx_",$newImage),256,256);
-    }
-  }
-  return "{$term}.{$ext}";
-}
-function search_engine_request($server,$term,$size="large",$color="",$type="",$licence=""){
 
-  $server = "yahoo";
+function search_engine_request($server,$term,$size="large",$color="",$type="",$licence=""){
 
   $size    = array_key_exists("size",$_REQUEST)    ? $_REQUEST["size"]    : $size;
   $color   = array_key_exists("color",$_REQUEST)   ? $_REQUEST["color"]   : $color;
@@ -170,6 +119,7 @@ imgl=fmsuc>Free to modify, share, and use commercially
 
   return $m[1];
   }
+
 function search_engine_fetch($server,$term,$fetch,$tags,$count=1){
   $imgdir = "$term/".$_SERVER["CFG"]["SETUP"]["IMAGES"];
   $src = [];
