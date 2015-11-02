@@ -1,8 +1,17 @@
 <?php
 
 //config
-$_SERVER["FLAG"]= array();
 $_SERVER["CFG"] = parse_ini_file(".browse/global.ini",true);
+
+const MIRROR = ".browse";
+const I      = "/"; //DIRECTORY_SEPARATOR;
+const J      = "/";
+const LOGO   = "logo";
+const COVER  = "cover";
+const CAST   = "cast";
+const WPAPER = "wallpaper";
+const FX     = "fx_";
+
 if(preg_match("/Windows NT/si",$_SERVER["HTTP_USER_AGENT"])){
   $_SERVER["OS"] = "windows-nt";
   $_SERVER["SHELL"] = "bat";
@@ -17,6 +26,24 @@ function trace_log($msg){
 }
 
 //utils
+function scan_layout(){
+  include_once($_SERVER["UTIL"]["SEARCH_FILE"]);
+  foreach(glob($_SERVER["ROOT"]."*") as $fifo){
+    $path = basename($fifo);
+    if(is_file($fifo)){
+      $name = substr($path,0,strlen($path)-4);
+      $cover= @array_pop( glob($_SERVER["CFG"]["FILE"]["FX_PATH"].I.FX.$name."*") );
+      if(!count($cover) && 
+         !search_engine_single($this->cfg["UTIL"]["SEARCH_SERVER"],
+                              utf8_encode($name),$_SERVER["CFG"]["FILE"]["TAGS"])){
+        trace_log("root_page.search_engine_single $name");
+        }
+      }
+    elseif(is_dir($fifo) && !is_dir($path)){
+      search_async($path);
+      }
+    }  
+  }
 function create_preview($src,$tgt,$maxwidth,$maxheight){
 
 // Set a maximum height and width
@@ -34,9 +61,13 @@ if ($width/$height > $ratio_orig) {
 } else {
    $height = $width/$ratio_orig;
 }
-
+@list($r,$g,$b) = explode(" ",@$_SERVER["CFG"]["SETUP"]["PREVIEW_BG_COLOR"]);
+if(is_null($b)){ 
+  trace_log("create_preview bgColor not in global.ini");
+  $r = 175 ; $g=175;$b = 175;
+  }
 $image_p = imagecreatetruecolor($width, $height);
-imagefill($image_p,0,0,imagecolorallocate($image_p, 175, 175, 175));
+imagefill($image_p,0,0,imagecolorallocate($image_p, $r, $g, $b));
 
 try{
   switch($ext){
@@ -71,7 +102,7 @@ try{
   imagedestroy($image_p);
 }
 function search_async($path){
-  include_once(".browse/search.php");
+  include_once($this->cfg["UTIL"]["SEARCH_FILE"]);
   $param=search_engine_start($path);
   //$searchfile = sys_get_temp_dir()."/{$_SERVER['SERVER_NAME']}_{$_SERVER['SERVER_PORT']}_search.prm";
   //file_put_contents($searchfile,serialize($param));
@@ -82,11 +113,9 @@ function search_async($path){
   }
 //FILES
 function search_single($name){
-  include_once(".browse/search.php");
+  include_once($this->cfg["UTIL"]["SEARCH_FILE"]);
   search_engine_single("yahoo",utf8_encode($name),"poster"); 
   }
-  
-
 function file_request_handle($fifo){
   $name = basename(substr($fifo,0,strlen($fifo)-4));//files to root restriction
   if(array_key_exists("research",$_REQUEST)){

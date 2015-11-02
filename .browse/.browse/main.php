@@ -19,26 +19,8 @@ function route_file($file,$return=false){
   }
 //
 function route_folder($dir,$return=false){
-  $CONTENT = ["FOLDER","SETUP","ROOT"][ !$dir ? 2 : intval(preg_match("/^\.browse/",$dir))];//todo:
-  $RENDER  = ["\\render\\file_item","\\render\\folder_item"];
-  $FILTER  = preg_replace("/[[:cntrl:]]/","",strval(@$_REQUEST["filter"]));
-  $EXCLUDE = explode(";",$_SERVER["CFG"][$CONTENT]["EXCLUDE"]);
-  //
-  include($_SERVER["CFG"][$CONTENT]["RENDERER"]);
-
-  /*dev*/if($CONTENT=="SETUP" && @$_GET["hitme"]){include(".browse/setup/renderer.php");return;}
-
-  $print  = render\handle_request($dir,$return);
-  $print .= render\start($dir,$return) ;
-  //
-  foreach(glob($_SERVER["ROOT"].$dir."/".$FILTER."*") as $fifo){
-    if(!in_array(utf8_encode(basename($fifo)),$EXCLUDE)){
-      $print .= $RENDER[intval(is_dir($fifo))]($fifo,$return);
-      }
-    }
-  //
-  $print .= render\end($dir,$return);
-  return $return ? $print : true;
+  include($_SERVER["CFG"][["FOLDER","SETUP","ROOT"][ !$dir ? 2 : intval(preg_match("/^\.browse/",$dir))]]["RENDERER"]);
+  (new page($dir))->full_print();
   }
 //
 function run(){

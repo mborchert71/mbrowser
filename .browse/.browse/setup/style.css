@@ -38,7 +38,7 @@
   border-collapse:collapse;
   empty-cells:show;
   width:100%;
-  height:100%
+  height:100%;
   }
 #interface {
   position: absolute;
@@ -48,57 +48,62 @@
   height:100%
   }
 #content{
+  margin-left:16px;
+  margin-right:-32px;
   height:100%;
   position:absolute;
   overflow:auto;
   }
 .top{
+  height:32px;
+  max-height:128px;
   text-align:right;
   vertical-align:top;
   }
 .mid{
   text-align:center;
-  vertical-align:middle;
   }
 .toe{
   text-align:center;
   vertical-align:bottom;
   }
 .left{
+  width:1%;
+  min-width:0px;
   }
 .center{
   }
-.bottom{
+.right{
+  width:1%;
+  min-width:0px;
   }
 #cell001{
-  width:0px;
   }
 #cell002{
-  width:100%;background:red;
+  background:#4F5F5F;
+  border-bottom-right-radius:12px;
+  border-bottom-left-radius:12px;
   }
 #cell004{
-  width:0px;
   }
 #cell008{
-  width:0px;
   }
 #cell016{
-  width:100%;
-  height:100%;
+  position:relative;
+  vertical-align:top;
   }
 #cell032{
-  width:0px;
   }
 #cell064{
-  width:0px;
   }
 #cell128{
-  width:100%;background:red;
-  height:32px;
+  background:#4F5F5F;
+  height:1px;
   padding:8px;
+  border-top-right-radius:12px;
+  border-top-left-radius:12px;
   }
 #cell256{
-  width:0px;
   }
 
 #mirror_switch{
@@ -108,9 +113,9 @@
   }
 
 .navi a {
+  padding-left:8px;
   text-decoration:none;
   text-shadow: 0px 3px #333333;
-  margin:8px
   }
 
 .folder{
@@ -141,13 +146,21 @@
   position:relative;
   opacity:1;
   }
+.image select{
+  width:75%
+}
+.switch{
+  width:32px;
+  height:32px;
+  margin:4px;
+  }
 .item-bar{
   position:absolute;
   margin-top:-24px;
   width:100%;
   z-index:1;
   padding-top:-32px;
-  background:grey;
+  background:#4F5F5F;
   }
 .trash-can{
   float:right;
@@ -178,13 +191,22 @@
   border-radius:8px;
   }
 #count{
+  background:#4F5F5F;
+  border:0;
   vertical-align:middle;
-  width:24px;
+  width:32px;
   height:24px;
   }
-input[type="submit"]{
+#menu input[type="submit"]{
   background:url(".browse/images/search-button32.png") no-repeat center center transparent;
   border:0;
   width:32px;
   height:32px;  
   }
+#submit_images {
+  float:right;
+  margin-top:-24px;
+  background:transparent;
+  border:0px;
+  cursor:pointer;
+}

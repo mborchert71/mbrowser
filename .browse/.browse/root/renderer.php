@@ -59,7 +59,7 @@ class page{
     $style       = $this->xml->xpath("/html/head/style");
     $style[0][0] = $this->css;
     //
-    $content       = $this->xml->xpath("/html/body/div");
+    $content       = $this->xml->xpath("/html/body/div/table/tbody/tr/td/div");
     $this->content_hook = &$content [0][0];
     }
   public function addNavi(SimpleXMLElement &$e,$path){
@@ -98,8 +98,11 @@ class page{
       $link = $e->addChild("a");
       $link->addAttribute("href","?0=".urlencode($path));
       $link->addAttribute("target","bypass");
+      $link->addAttribute("onmouseover","document.getElementById('title_display').innerHTML=\"$label\"");
+      $link->addAttribute("onmouseout","document.getElementById('title_display').innerHTML=\"\"");
       $div = $link->addChild("div");
       $div->addAttribute("class","file");
+      
       if(!$cover){
         $div->addChild("br");
         $div->addChild("span",$label);
@@ -129,6 +132,8 @@ class page{
     //
     $link = $e->addChild("a");
     $link->addAttribute("href","?0=".urlencode($path));
+    $link->addAttribute("onmouseover","document.getElementById('title_display').innerHTML=\"$label\"");
+    $link->addAttribute("onmouseout","document.getElementById('title_display').innerHTML=\"\"");
     $div = $link->addChild("div");
     $div->addAttribute("class","folder");
     //

@@ -29,19 +29,23 @@
 31.10.2015  7:04:12,07	root SimpleXMLElement
 31.10.2015 23:50:57,17	global.ini to form  (nur über ?0=.browse/ !mit Slash zu erreichen)
 01.11.2015 10:58:36,07	cfg in global.ini einpflegen
-	*/images submit button into navi panel
-	search chaos
-	maintain : rename , convert , waisen , remove images clean fetch list tag:removed
+01.11.2015 18:15:18,79	*/images submit button into navi panel, active_fx first
+01.11.2015 23:09:14,44	frontpage gepimpt und page.htm wie folder und setup
+	search
 	loading animation
-	getridof underscore cast wallpaper logo cover ?
+	maintain : rename , convert , waisen , remove images clean fetch list tag:removed
 ----github--update-------------------------------------------------------------------------------------------
 ----linux--execution-test------------------------------------------------------------------------------------
 	sort year
-	playlist
+	play_list
 	play_next
-
-	automatisierung ( layout , format )
-	filebrowser ops create,delete,move,rename,copy,paste
+	automatisierung I ( layout , format )
+----github--update-------------------------------------------------------------------------------------------
+	filebrowser ops I  create,delete,rename 
+----github--beta-release-------------------------------------------------------------------------------------------
+	test-units
+	filebrowser ops II move,copy,paste
+	filebrowser ops III drag n drop
 	cards fifo
 	links. zb: Hulk/* ->linkto The Avengers/HUlk (2008) /The incredible Hulk (201?)
 	47lo  layout
