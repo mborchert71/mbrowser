@@ -7,7 +7,7 @@ class page{
   public $url;              //encoded
   public $urlq;             //standard query ?0=docroot/path
   public $label;            //utf8_encoded
-  public $my;               //global.ini SETUP section
+  public $my;               //global.ini own section
   public $cfg;              //global.ini
   public $set;              //maybe changing varname vars
   public $stackoprints=[];  //stack of content
@@ -197,14 +197,16 @@ class page{
       $render = $this->renderer[$ext];
       $this->$render($e,$path);    
       }
-    elseif($ext!="php"){
+    elseif($ext!="PHP"){
+      $class = $this->style_file($ext);
       $cover = @array_pop(glob(dirname($path).I.$this->mr_images.I.FX.basename($path)."*"));
       $label = utf8_encode(str_replace(["_","."]," ", substr(basename($path),0,-4)));
       $link = $e->addChild("a");
       $link->addAttribute("href","?0=".urlencode($path));
       $link->addAttribute("target","bypass");
       $div = $link->addChild("div");
-      $div->addAttribute("class","file");
+      $div->addAttribute("class","file $class");
+      
       if(!$cover){
         $div->addChild("span",$label);
         }
@@ -251,5 +253,17 @@ class page{
     $this->addBasics();
     $this->addGlob($this->content_hook,$this->docroot.$this->dir.$this->filter."/*");
     print $this->xml->asXML();
+    }
+  public function style_file($ext){
+    static $extypes;
+    if(!is_file(".browse/images/".strtolower($ext).".png")){ return ""; }
+    if(!is_array($extypes)){ $extypes = array(); }
+    if(!in_array($ext,$extypes)){
+      $extypes[] = $ext;
+      $hook = $this->xml->xpath("/html/head");
+      $head = $hook[0];
+      $head->addChild("style",".{$ext} {background-image:url(\".browse/images/".strtolower($ext).".png\");}");
+      }
+    return $ext;
     }
   }

@@ -112,9 +112,11 @@ class page{
           }
         }
       if(array_key_exists($this->cfg["TERM"],$_POST)){
+        loading_screen($location=null);
         include_once($this->cfg["UTIL"]["SEARCH_FILE"]);
         search_engine_find($this->path,$this->cfg["UTIL"]["SEARCH_SERVER"],
                                 $_POST[$this->cfg["TERM"]],$_POST[$this->cfg["COUNT"]]);
+        loading_screen($location="?0=".$this->dir);
         }
       }
     }

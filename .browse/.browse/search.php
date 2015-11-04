@@ -12,7 +12,7 @@ function search_engine_find($dir,$server,$term,$count=5){
     trace_log("search_engine_find called from non images folder $dir");
     return false;
     }
-  $logfile = dirname($dir).$_SERVER["CFG"]["SETUP"]["FETCH_LOG"];
+  $logfile = dirname($dir).I.$_SERVER["CFG"]["SETUP"]["FETCH_LOG"];
   $src = [];
   $handle = fopen($logfile, "a+");
   if($handle){
