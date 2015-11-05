@@ -118,7 +118,46 @@ class page{
                                 $_POST[$this->cfg["TERM"]],$_POST[$this->cfg["COUNT"]]);
         loading_screen($location="?0=".$this->dir);
         }
-      }
+      }elseif(@count($_POST)){
+        if(array_key_exists($this->cfg["DELETE"],$_POST)){ 
+          foreach($_POST[$this->cfg["DELETE"]] as $idx => $file){
+            if(is_file($file)){
+              if(!unlink($file)){
+                trace_log("handle_request.delete $file");
+                }
+              }
+            }
+          }
+        if(array_key_exists("mirror_fifo",$_POST)){ 
+          foreach($_POST["mirror_fifo"] as $idx => $fifo){
+            if(is_file($fifo)){
+              $filename = basename(substr($fifo,0,-4));
+              $ext = substr($fifo,-3);
+              if($filename != $_POST["mirror_name"][$idx]){
+                if(!rename($fifo,dirname($fifo).I.$_POST["mirror_name"][$idx].".".$ext)){
+                  trace_log("handle_request.rename $fifo => ".$_POST["mirror_name"][$idx]);
+                  }
+                }
+              }
+            else{
+              $filename = basename($fifo);
+              if($filename != $_POST["mirror_name"][$idx]){
+                if(!rename($fifo,dirname($fifo).I.$_POST["mirror_name"][$idx])){
+                  trace_log("handle_request.rename $fifo => ".$_POST["mirror_name"][$idx]);
+                  }
+                else{
+                  $setup_dir = str_replace($this->docroot,$this->docroot.I.MIRROR.I,$fifo);
+                  if(is_dir($setup_dir)){
+                    if(!rename($setup_dir,dirname($setup_dir).I.$_POST["mirror_name"][$idx])){
+                      trace_log("handle_request.rename mirror $fifo => ".$_POST["mirror_name"][$idx]);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
     }
   public function addBasics(){
     //todo: if i load the htm_template, i should load the paths to predefined standard-hooks as well
@@ -185,32 +224,6 @@ HOOKS;
     $this->addNavi($navi,$this->dir);
     //8
     }
-  public function addContentByCondition(SimpleXMLElement &$e,$content=null,$condition=false){
-    //todo:elaborate
-    //condition true function preg_match arguments regey path , content c:form a:method->post ,a:action->url ,return element true
-    //
-    $condition = preg_match("/".preg_quote($this->my["IMAGES"])."$/",$this->path);
-    if($condition){
-      if($content){
-        $e = $this->content_hook->addChild("form");
-        $e->addAttribute("method","post");
-        $e->addAttribute("action","?0=".urlencode($this->dir));
-        $e->addAttribute("name","images");
-        $div = $e->addChild("div");
-        foreach(glob($this->path.I.FX."*") as $active_layout_image){
-          $this->addImage($div,$active_layout_image);
-          $this->exclude[] = realpath($active_layout_image);
-          }
-        }
-      else{
-        $submit = $this->set->cell[7]->addChild("input");
-        $submit->addAttribute("type","submit");
-        $submit->addAttribute("onclick","document.forms['images'].submit();return false;");
-        $submit->addAttribute("id","submit_images");
-        }
-      }
-      return $e;
-    }
   public function addNavi(SimpleXMLElement &$e,$path){
     $m = $e->addChild("a","&lArr;");
     $m->addAttribute("href","/");
@@ -260,16 +273,21 @@ HOOKS;
   public function addFile(SimpleXMLElement &$e,$path){
     $path = substr($path,strlen($this->docroot.".browse/"));
     $ext = strtoupper(substr($path,-3));
+    $doc_item = null;
+    if(preg_match("/".preg_quote($this->my["IMAGES"])."$/",dirname($path))){
+      return $this->addLayoutItem($e,$path);      
+      }
     if(array_key_exists($ext,$this->renderer)){
       $render = $this->renderer[$ext];
-      $this->$render($e,$path);    
+      $doc_item = $this->$render($e,$path); 
       }
-    elseif($ext!="php"){
+    elseif($ext!="PHP"){
       $link = $e->addChild("a");
       $link->addAttribute("href",MIRROR."/file.php?0=".urlencode($path));
-      $div = $link->addChild("div"," ".utf8_encode(str_replace(["_","."]," ", substr(basename($path),0,-4))));/*empty tag if path renders empy*/
-      $div->addAttribute("class","file");
-      }   
+      $doc_item = $link->addChild("div"," ".utf8_encode(str_replace(["_","."]," ", substr(basename($path),0,-4))));/*empty tag if path renders empy*/
+      $doc_item->addAttribute("class","file");
+      }
+      return $doc_item;
     }
   public function addFolder(SimpleXMLElement &$e,$path){
     $link = $e->addChild("a");
@@ -277,7 +295,7 @@ HOOKS;
     $div = $link->addChild("div",utf8_encode(str_replace(["_","."]," ",basename($path))));
     $div->addAttribute("class","folder");
     }
-  public function addImage(SimpleXMLElement &$e,$path){
+  public function addLayoutItem(SimpleXMLElement &$e,$path){
     //
     $box = $e->addChild("div");
     $box->addAttribute("class","file image");
@@ -286,15 +304,80 @@ HOOKS;
     $img = $link->addChild("img");
     $img->addAttribute("src",urlencode($path));
     //
-    if(!preg_match("/".preg_quote($this->my["IMAGES"])."$/",dirname($path))){
-      $div = $box->addChild("div","&nbsp;");
-      $div->addAttribute("class","item-bar");      
+    $filename = basename($path);
+    //
+    $div = $box->addChild("div");
+    $div->addAttribute("class","item-bar");
+    $trash = $div->addChild("div");
+    $trash->addAttribute("title","delete");
+    $trash->addAttribute("class","trash-can");
+    $trash_icon = $trash->addChild("img");
+    $trash_icon->addAttribute("src",MIRROR."/images/delete-button.png");
+    $trash_mark = $trash->addChild("input");
+    $trash_mark->addAttribute("type","checkbox");
+    $trash_mark->addAttribute("name","delete[]");
+    $trash_mark->addAttribute("value",$filename);
+    //
+    $types = implode("|",[preg_quote(LOGO),preg_quote(WPAPER),preg_quote(CAST),preg_quote(COVER)]);
+    //
+    if(preg_match("/^".preg_quote(FX)."($types|.*)/",$filename,$type)){
+      if($type[1] && preg_match("/^($types)$/",$type[1])){
+        $div->addChild("span",$type[1]);
+        }
       }
     else{
-      $filename = basename($path);
-      //
-      $div = $box->addChild("div");
-      $div->addAttribute("class","item-bar");
+      $customfile = $div->addChild("input");
+      $customfile->addAttribute("type","hidden");
+      $customfile->addAttribute("name",$this->cfg["LAYOUT_F"]."[]");
+      $customfile->addAttribute("value",$filename);
+      $select = $div->addChild("select");
+      $select->addAttribute("name",$this->cfg["LAYOUT_E"]."[]");
+      $select->addChild("option"," ");
+      $select->addChild("option",LOGO);
+      $select->addChild("option",CAST);
+      $select->addChild("option",WPAPER);
+      foreach($this->mirror_fifo as $fifo){
+        if(is_file($fifo)){
+          $select->addChild("option",basename($fifo));
+          }
+        }
+      }
+      return $box;
+    }
+  public function addMirror(SimpleXMLElement &$e,$path){
+    //todo:create folder , download here , upload
+    $section = $e->addChild("hr");
+    $section->addAttribute("style","clear:both");
+    $path = str_replace(MIRROR.I,"",$path);
+    foreach(glob($path) as $fifo){
+      if(is_dir($fifo)){
+        $this->addMirrorFolder($e,$fifo);
+        }
+      else{
+        $this->addMirrorFile($e,$fifo);
+        }
+      }
+    return $e;
+    }
+  public function addMirrorFile(SimpleXMLElement &$e,$fifo){
+      $filename = substr(basename($fifo),0,-4);
+      
+      preg_match("/S[\d]{1,2}[\.-_\s]{0,1}(E[\d]{1,2})/si",$filename,$match);
+      $suggested_filename = count($match) ? strtoupper($match[1]) : $filename;
+      
+      $div = $e->addChild("div");
+      $div->addAttribute("style","width:440px;clear:both");
+      $hidden = $div->addChild("input");
+      $hidden->addAttribute("type","hidden");
+      $hidden->addAttribute("value",$fifo);
+      $hidden->addAttribute("name","mirror_fifo[]");
+      $input = $div->addChild("input");
+      $input->addAttribute("value",$filename);
+      $input->addAttribute("name","mirror_name[]");
+      $input->addAttribute("style","background:transparent;width:300px");
+      $suggestion = $div->addChild("button","suggest");
+      $suggestion->addAttribute("value",$suggested_filename);
+      $suggestion->addAttribute("onclick","this.previousSibling.value=this.value;return false;");
       $trash = $div->addChild("div");
       $trash->addAttribute("title","delete");
       $trash->addAttribute("class","trash-can");
@@ -303,33 +386,45 @@ HOOKS;
       $trash_mark = $trash->addChild("input");
       $trash_mark->addAttribute("type","checkbox");
       $trash_mark->addAttribute("name","delete[]");
-      $trash_mark->addAttribute("value",$filename);
-      //
-      $types = implode("|",[preg_quote(LOGO),preg_quote(WPAPER),preg_quote(CAST),preg_quote(COVER)]);
-      //
-      if(preg_match("/^".preg_quote(FX)."($types|.*)/",$filename,$type)){
-        if($type[1] && preg_match("/^($types)$/",$type[1])){
-          $div->addChild("span",$type[1]);
-          }
-        }
-      else{
-        $customfile = $div->addChild("input");
-        $customfile->addAttribute("type","hidden");
-        $customfile->addAttribute("name",$this->cfg["LAYOUT_F"]."[]");
-        $customfile->addAttribute("value",$filename);
-        $select = $div->addChild("select");
-        $select->addAttribute("name",$this->cfg["LAYOUT_E"]."[]");
-        $select->addChild("option"," ");
-        $select->addChild("option",LOGO);
-        $select->addChild("option",CAST);
-        $select->addChild("option",WPAPER);
-        foreach($this->mirror_fifo as $fifo){
-          if(is_file($fifo)){
-            $select->addChild("option",basename($fifo));
-            }
-          }
-        }
+      $trash_mark->addAttribute("value",$fifo);
+    }
+  public function addMirrorFolder(SimpleXMLElement &$e,$fifo){
+      $filename = basename($fifo);     
+      $div = $e->addChild("div");
+      $div->addAttribute("style","width:440px;clear:both");
+      $hidden = $div->addChild("input");
+      $hidden->addAttribute("type","hidden");
+      $hidden->addAttribute("value",$fifo);
+      $hidden->addAttribute("name","mirror_fifo[]");
+      $input = $div->addChild("input");
+      $input->addAttribute("value",$filename);
+      $input->addAttribute("name","mirror_name[]");
+      $input->addAttribute("style","background:grey;width:300px");
+      /*$suggestion = $div->addChild("button","suggest");
+      preg_match("/S[\d]{1,2}[\.-_\s]{0,1}(E[\d]{1,2})/si",$filename,$match);
+      $suggested_filename = count($match) ? strtoupper($match[1]) : $filename;
+      $suggestion->addAttribute("value",$suggested_filename);
+      $suggestion->addAttribute("onclick","this.previousSibling.value=this.value;return false;");
+      $trash = $div->addChild("div");
+      $trash->addAttribute("title","delete");
+      $trash->addAttribute("class","trash-can");
+      $trash_icon = $trash->addChild("img");
+      $trash_icon->addAttribute("src",MIRROR."/images/delete-button.png");
+      $trash_mark = $trash->addChild("input");
+      $trash_mark->addAttribute("type","checkbox");
+      $trash_mark->addAttribute("name","delete[]");
+      $trash_mark->addAttribute("value",$fifo);*/
       }
+  public function addImage(SimpleXMLElement &$e,$path){
+    $box = $e->addChild("div");
+    $box->addAttribute("class","file image");
+    $link = $box->addChild("a");
+    $link->addAttribute("href",urlencode($path));
+    $img = $link->addChild("img");
+    $img->addAttribute("src",urlencode($path));
+    $div = $box->addChild("div","&nbsp;");
+    $div->addAttribute("class","item-bar");
+    return $box;
     }
   public function deferXml(SimpleXMLElement &$e,$path,$args){
     $this->stackoprints[] = ["hook"=>$e,"path"=>$path,"args"=>$args];
@@ -337,9 +432,26 @@ HOOKS;
   public function full_print(){
     $this->handle_request();
     $this->addBasics();
-    $e = $this->addContentByCondition($this->content_hook,true);
+    
+    $e = $this->content_hook->addChild("form");
+    $e->addAttribute("method","post");
+    $e->addAttribute("action","?0=".urlencode($this->dir));
+    $e->addAttribute("name","images");
+    $div = $e->addChild("div");
+    
+    foreach(glob($this->path.I.FX."*") as $active_layout_image){
+      $this->addLayoutItem($div,$active_layout_image);
+      $this->exclude[] = realpath($active_layout_image);
+      }
+    
     $e = $this->addGlob($e,$this->docroot.$this->dir.$this->filter."/*",$this->exclude);
-    $this->addContentByCondition($e);
+    $e = $this->addMirror($e,$this->docroot.$this->dir.$this->filter."/*",$this->exclude); //mirror_excludes
+    
+    $submit = $this->set->cell[7]->addChild("input");
+    $submit->addAttribute("type","submit");
+    $submit->addAttribute("onclick","document.forms['images'].submit();return false;");
+    $submit->addAttribute("id","submit_images");
+
     print $this->xml->asXML();
     }
   }
