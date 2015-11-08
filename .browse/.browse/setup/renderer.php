@@ -1,5 +1,5 @@
 <?php
-//
+
 class page{
   public $docroot;          //relative_path
   public $dir;              //as requested
@@ -25,7 +25,7 @@ class page{
     $this->url    = urlencode($dir);
     $this->urlq   = "?0=".$this->url;
     $this->label  = utf8_encode(basename($dir));
-    $this->exclude= explode(" ",$this->my["EXCLUDE"]);
+    $this->exclude= explode("\t",$this->my["EXCLUDE"]);
     //
     $this->set = new stdClass;
     $this->set->site_title  = $this->my["SITE_TITLE"];
@@ -52,53 +52,33 @@ class page{
       return false;
     }
   public function check_mirror(){
-    if(!$this->path){
-      return;
-      }
-    $imagespath = $this->path.DIRECTORY_SEPARATOR.$this->my["IMAGES"];
-    if(!is_dir($this->path)){
-      if(!mkdir($this->path)){
-        trace_log("check_mirror.mkdir <mirror>".$this->path);
-        return;
-        }
-      if(basename($this->path)!=$this->my["IMAGES"]){
-        @mkdir($imagespath);
-        }
-      return;
-      }
-    if(basename($this->path)!=$this->my["IMAGES"] && !is_dir($imagespath)){
-      if(!mkdir($imagespath)){
-        trace_log("check_mirror.mkdir <mirror>".$imagespath);
-        return;
-        }
-      }
     }
   public function handle_request(){
     //
     $this->set->filter      = ""; //preg_replace("/[[:cntrl:]]/","",strval(@$_REQUEST["filter"]));
     //
     if(preg_match("/".preg_quote($this->my["IMAGES"])."$/",$this->path)){
+      if(!is_file($this->path.I."dummy_cast.jpg")){
+        copy(".browse/images/dummy_cast.jpg",$this->path.I."dummy_cast.jpg");
+        }
       if(array_key_exists($this->cfg["LAYOUT_E"],$_POST)){             //selection on image        
         foreach($_POST[$this->cfg["LAYOUT_E"]] as $idx => $ctype){     //the chosen option
           $cname = $_POST[$this->cfg["LAYOUT_F"]][$idx];               //the image
           $cfile = $this->path.I.$cname;
-          $fxpath= $this->path.I.FX;
-          if(in_array($ctype,[LOGO,CAST,WPAPER])){           
-            foreach(glob($fxpath.$ctype."*") as $oldfx){
-              unlink($oldfx);                                          //delete files with having option already
+          $ext   = substr($cname,-4);
+          $fxpath= dirname($this->path).I."current".I;
+          if(in_array($ctype,[LOGO,CAST,WPAPER,COVER])){
+            if($ctype==COVER){
+              $dir  = basename(dirname($this->path));
+              $cover = dirname(dirname($this->path)).I."current".I;
+              create_preview($cfile,$cover.$dir.$ext,$this->my["PREVIEW_MAX_WIDTH"],$this->my["PREVIEW_MAX_HEIGHT"]); 
               }
-            copy($cfile,$fxpath.$ctype."_".$cname);                    //make file to chosen option
-            if($ctype==LOGO){                                          //(folder)cover
-              foreach(glob($fxpath.COVER."*") as $oldcover){
-                unlink($oldcover);
-                }
-              create_preview($cfile,$fxpath.COVER."_".$cname,
-                                    $this->my["PREVIEW_MAX_WIDTH"],$this->my["PREVIEW_MAX_HEIGHT"]); 
+            else{
+              copy($cfile,$fxpath.$ctype.$ext);  
               }
             }
           elseif(trim($ctype)){                                         //(file)cover
-            create_preview($cfile,$fxpath.$ctype.$cname,
-                                  $this->my["PREVIEW_MAX_WIDTH"],$this->my["PREVIEW_MAX_HEIGHT"]); 
+            create_preview($cfile,$fxpath.$ctype.$ext,$this->my["PREVIEW_MAX_WIDTH"],$this->my["PREVIEW_MAX_HEIGHT"]); 
             }
           }
         }
@@ -118,7 +98,17 @@ class page{
                                 $_POST[$this->cfg["TERM"]],$_POST[$this->cfg["COUNT"]]);
         loading_screen($location="?0=".$this->dir);
         }
-      }elseif(@count($_POST)){
+      }
+    elseif(@count($_POST)){
+        if(array_key_exists("mkdir",$_POST)){
+          if(!mkdir($_POST["mkdir"])){
+            trace_log("handle_request mkdir ".$_POST["mkdir"]);
+            }
+          else{
+            mkdir($_POST["mkdir"].I.$this->my["IMAGES"]);
+            mkdir($_POST["mkdir"].I.$this->my["CURRENT"]);
+            }
+          }
         if(array_key_exists($this->cfg["DELETE"],$_POST)){ 
           foreach($_POST[$this->cfg["DELETE"]] as $idx => $file){
             if(is_file($file)){
@@ -160,18 +150,6 @@ class page{
         }
     }
   public function addBasics(){
-    //todo: if i load the htm_template, i should load the paths to predefined standard-hooks as well
-    //OR define a set of standard hooks to be a fixed path so no cfg is needed (like "title". xpath is pretty determined)
-$hooks = <<<HOOKS
-<htm:hooks>
-  <title>/html/head/title</title>
-  <style>/html/head/style</style>
-  <script:head>/html/head/script</script:head>
-  <script:body>/html/body/script</script:body>
-  <images class="wallpaper cast">/html/body/img</images>
-  <cells grid="3x3">//td</cells>
-</htm:hooks>
-HOOKS;
     $title  = $this->xml->xpath("/html/head/title");
     $title[0][0] = $this->set->site_title;
     $style       = $this->xml->xpath("/html/head/style");
@@ -180,7 +158,6 @@ HOOKS;
     $design[0]->attributes()["src"] = $this->set->wallpaper;
     $design[1]->attributes()["src"] = $this->set->cast;
     //
-    
     $cell    = $this->xml->xpath("//td");
     $this->set->cell = &$cell;
     //0
@@ -207,7 +184,7 @@ HOOKS;
       }
     //
     $mirror_switch = $menu->addChild("a");
-    $mirror_switch->addAttribute("href","?0=".urlencode(str_replace(["/".$this->my["IMAGES"],MIRROR],"",$this->path)));
+    $mirror_switch->addAttribute("href","?0=".urlencode(str_replace(["/".$this->my["CURRENT"],"/".$this->my["IMAGES"],MIRROR],"",$this->path)));
     $img = $mirror_switch->addChild('img');
     $img->addAttribute("id","mirror_switch");
     $img->addAttribute("src",MIRROR."/images/menu-button.png");
@@ -333,13 +310,12 @@ HOOKS;
       $select = $div->addChild("select");
       $select->addAttribute("name",$this->cfg["LAYOUT_E"]."[]");
       $select->addChild("option"," ");
+      $select->addChild("option",COVER);
       $select->addChild("option",LOGO);
       $select->addChild("option",CAST);
       $select->addChild("option",WPAPER);
       foreach($this->mirror_fifo as $fifo){
-        if(is_file($fifo)){
-          $select->addChild("option",basename($fifo));
-          }
+        $select->addChild("option",basename($fifo));
         }
       }
       return $box;
@@ -400,11 +376,13 @@ HOOKS;
       $input->addAttribute("value",$filename);
       $input->addAttribute("name","mirror_name[]");
       $input->addAttribute("style","background:grey;width:300px");
-      /*$suggestion = $div->addChild("button","suggest");
-      preg_match("/S[\d]{1,2}[\.-_\s]{0,1}(E[\d]{1,2})/si",$filename,$match);
-      $suggested_filename = count($match) ? strtoupper($match[1]) : $filename;
-      $suggestion->addAttribute("value",$suggested_filename);
-      $suggestion->addAttribute("onclick","this.previousSibling.value=this.value;return false;");
+      $mirror_dir = substr($fifo,strlen($this->docroot));
+      if(!is_dir($mirror_dir)){
+        $setup_mirror = $div->addChild("button","setup");
+        $setup_mirror->addAttribute("name","mkdir");
+        $setup_mirror->addAttribute("value",$mirror_dir);
+        }
+      /*
       $trash = $div->addChild("div");
       $trash->addAttribute("title","delete");
       $trash->addAttribute("class","trash-can");

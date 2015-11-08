@@ -36,9 +36,13 @@
 03.11.2015  9:59:36,18	loading animation (flush() version)
 04.11.2015 14:05:29,49	save ini
 05.11.2015 19:30:46,19	die wichtigsten Fifo manipulationen : rename , delete ; addImage korrigiert zu addLayoutitem
-fx_root vs fx_folder
+07.11.2015 10:38:48,31	Windows XP Test ist nogo. php 5.4.x letzte XP kompatible version
+07.11.2015 22:37:27,90	fx_root vs fx_folder, fx_cover, glob ui-images once
+08.11.2015  1:31:50,13	image_ordner nicht erstellen sondern anbieten
+branch: root zu realdocroot statt mirrordocroot, fstype hash, setup hash, static pages  
 fs-functions auslagern aus renderer
 renderer laden
+datei-informationen
 ----linux--execution-test------------------------------------------------------------------------------------
 ----github--update-------------------------------------------------------------------------------------------
 	filebrowser ops I  create,delete,rename 

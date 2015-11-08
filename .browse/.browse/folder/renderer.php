@@ -30,27 +30,29 @@ class page{
     $this->set->wallpaper   = $this->my["FX_WPAPER"];
     $this->set->cast        = $this->my["FX_CAST"];
     $this->set->logo        = $this->my["FX_LOGO"];
-    $this->set->exclude     = explode(" ",$this->my["EXCLUDE"]);
+    $this->set->exclude     = explode("\t",$this->my["EXCLUDE"]);
     $this->set->mr_images   = $this->cfg["SETUP"]["IMAGES"];
+    $this->set->ui_current  = $this->cfg["SETUP"]["CURRENT"];
     $this->set->mirror_fifo = glob($this->path."/*");
     $this->set->renderer = $this->cfg["RENDERER"];
+    $this->set->ui = array();
+    $keys = [WPAPER,LOGO,CAST];
     //
     $this->xml = new SimpleXMLElement($this->my["SITE"],null,true);
     $this->css = file_get_contents($this->my["STYLE"]);
     //brand  layout
-    $pos = strlen(FX);
-    foreach(glob(substr($this->path,0,strpos($this->path,I)).I.$this->mr_images.I.FX."*") as $layout_item){
-      $basename = basename($layout_item);
-      $key = substr($basename,$pos,strpos($basename, "_",$pos)-$pos);
-      if($key){
+    foreach(glob(substr($this->path,0,strpos($this->path,I)).I.$this->ui_current.I."*") as $layout_item){
+      $key = substr(basename($layout_item),0,-4);
+      $this->set->ui[$key] = urlencode($layout_item);
+      if(in_array($key,$keys)){
         $this->set->$key = urlencode($layout_item);
         }
       }
     //subpage layout
-    foreach(glob($dir.I.$this->mr_images.I.FX."*") as $layout_item){
-      $basename = basename($layout_item);
-      $key = substr($basename,$pos,strpos($basename, "_",$pos)-$pos);
-      if($key){
+    foreach(glob($this->dir.I.$this->ui_current.I."*") as $layout_item){
+      $key = substr(basename($layout_item),0,-4);
+      $this->set->ui[$key] = urlencode($layout_item);
+      if(in_array($key,$keys)){
         $this->set->$key = urlencode($layout_item);
         }
       }
@@ -70,24 +72,14 @@ class page{
       return false;
     }
   public function check_mirror(){
-    if(!$this->path){
-      trace_log("folder_item.mkdir empty ".$this->path);
-      return;
-      }
-    if(!is_dir($this->path)){
-      if(!mkdir($this->path)){
-        trace_log("check_mirror.mkdir <mirror>/".$this->path);
-        return;
+    $path = $this->path;
+    if(!is_dir($path)){
+      if(!mkdir($path)){
+        trace_log("check_mirror $path");
         }
-      if(basename($this->path)!=$this->mr_images){
-        @mkdir($this->path.I.$this->mr_images);
-        }
-      return;
-      }
-    if(!is_dir($this->path.I.$this->mr_images)){
-      if(!mkdir($this->path.I.$this->mr_images)){
-        trace_log("check_mirror.mkdir <mirror>/".$this->path);
-        return;
+      else{
+        mkdir($path.I.$this->cfg["SETUP"]["IMAGES"]);
+        mkdir($path.I.$this->cfg["SETUP"]["CURRENT"]);
         }
       }
     }
@@ -198,9 +190,10 @@ class page{
       $this->$render($e,$path);    
       }
     elseif($ext!="PHP"){
+      $basename = basename($path);
       $class = $this->style_file($ext);
-      $cover = @array_pop(glob(dirname($path).I.$this->mr_images.I.FX.basename($path)."*"));
-      $label = utf8_encode(str_replace(["_","."]," ", substr(basename($path),0,-4)));
+      $cover = array_key_exists($basename,$this->set->ui) ? $this->set->ui[$basename]: "";
+      $label = utf8_encode(str_replace(["_","."]," ", substr($basename,0,-4)));
       $link = $e->addChild("a");
       $link->addAttribute("href","?0=".urlencode($path));
       $link->addAttribute("target","bypass");
@@ -212,17 +205,17 @@ class page{
         }
       else{
         $img = $div->addChild("img");
-        $img->addAttribute("src",urlencode($cover));
+        $img->addAttribute("src",$cover);
         $img->addAttribute("alt",$label);
         $img->addAttribute("title",$label);
         }
       }   
     }
   public function addFolder(SimpleXMLElement &$e,$path){
+    $basename = basename($path);
     $path = substr($path,strlen($this->docroot));
-    $label = utf8_encode(str_replace(["_","."]," ",basename($path)));
-    $cover = @array_pop(glob($path."/".$this->mr_images."/".FX.COVER."*"));
-
+    $label = utf8_encode(str_replace(["_","."]," ",$basename));
+    $cover = array_key_exists($basename,$this->set->ui) ? $this->set->ui[$basename]: "";
     $link = $e->addChild("a");
     $link->addAttribute("href","?0=".urlencode($path));
     $div = $link->addChild("div");
@@ -233,7 +226,7 @@ class page{
       }
     else{
       $img = $div->addChild("img");
-      $img->addAttribute("src",urlencode($cover));
+      $img->addAttribute("src",$cover);
       $img->addAttribute("alt",$label);
       $img->addAttribute("title",$label);
       }
