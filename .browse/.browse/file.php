@@ -190,27 +190,26 @@ xpm	image/x-xpixmap
 xwd	image/x-xwindowdump
 z	application/x-compress
 zip	application/zip";
+//
 $ct = explode("\n",$map);
-$ext = substr($_GET[0],strlen($_GET[0])-3);
+$file= realpath("../../".$_GET[0]);
+$ext = substr($_GET[0],-3);
 $contenttype = "application/octet-stream";
-
 foreach($ct as $keyval){
   if(preg_match("/".preg_quote($ext)."/",$keyval)){
     $contenttype = substr($keyval,strpos($keyval,"\t"));
     break;
+    }
   }
-}
-
-$file = "../".$_GET[0];
-if (file_exists($file)) {
-    //header('Content-Description: File Transfer');
-    header('Content-Type: $contenttype');
-    //header('Content-Disposition: attachment; filename="'.basename($file).'"');
-    header('Content-Disposition: filename="'.basename($file).'"');
-    header('Expires: 0');
-    header('Cache-Control: must-revalidate');
-    header('Pragma: public');
-    header('Content-Length: ' . filesize($file));
-    readfile($file);
-    exit;
-}
+if (file_exists($file)){
+  //header('Content-Description: File Transfer');
+  header('Content-Type: $contenttype');
+  //header('Content-Disposition: attachment; filename="'.basename($file).'"');
+  header('Content-Disposition: filename="'.basename($file).'"');
+  header('Expires: 0');
+  header('Cache-Control: must-revalidate');
+  header('Pragma: public');
+  header('Content-Length: ' . filesize($file));
+  readfile($file);
+  exit;
+  }

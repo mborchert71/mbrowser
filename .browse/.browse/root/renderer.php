@@ -1,42 +1,58 @@
 <?php
-
+//
 class page{
-  public $docroot;          //relative_path
   public $dir;              //as requested
-  public $path;             //relative_path
   public $url;              //encoded
   public $urlq;             //standard query ?0=docroot/path
   public $label;            //utf8_encoded
-  public $my;               //global.ini SETUP section
-  public $cfg;              //global.ini
   public $set;              //maybe changing varname vars
   public $stackoprints=[];  //stack of content
   public $content_hook;     //SimpleXMLElement
   public $xml;              //htm template
   public $css;              //css style
+  public $cfg;              //global.ini
+  public $my;               //global.ini THIS RENDERERs section
+  public $root;             //global.ini ROOT section
+  public $setup;            //global.ini SETUP section
+  public $folder;           //global.ini FOLDER section
+  public $util;             //global.ini UTIL section
+  public $excludes;         //global.ini
   public function __construct($dir){
-    $this->docroot= $_SERVER["ROOT"];
-    $this->cfg    = &$_SERVER["CFG"];
-    $this->my     = &$_SERVER["CFG"]["ROOT"];
-    $this->dir    = $dir;
-    $this->path   = $dir;//see setup/renderer
-    $this->url    = urlencode($dir);
-    $this->urlq   = "?0=".$this->url;
-    $this->label  = utf8_encode(basename($dir));
+    $this->cfg   = &$_SERVER["CFG"];
+    $this->my    = &$_SERVER["CFG"]["ROOT"];
+    $this->root  = &$_SERVER["CFG"]["ROOT"];
+    $this->setup = &$_SERVER["CFG"]["SETUP"];
+    $this->folder= &$_SERVER["CFG"]["FOLDER"];
+    $this->util  = &$_SERVER["CFG"]["UTIL"];
+    $this->dir   = $dir;
+    $this->url   = urlencode($dir);
+    $this->urlq  = "?0=".$this->url;
+    $this->label = utf8_encode(basename($dir));
+    $this->xml   = new SimpleXMLElement($this->my["SITE"],null,true);
+    $this->css   = file_get_contents($this->my["STYLE"]);
+    $this->excludes  = explode("\t",$this->my["EXCLUDE"]);
     //
     $this->set             =  new stdClass;
     $this->set-> site_title= $this->my["SITE_TITLE"];
     $this->set-> filter    = preg_replace("/[[:cntrl:]]/","",strval(@$_REQUEST["filter"]));
-    $this->set-> excludes  = explode("\t",$this->my["EXCLUDE"]);
     $this->set-> renderer  = $this->cfg["RENDERER"];
-    $this->set->ui_current  = $this->cfg["SETUP"]["CURRENT"];
+    //
     $this->set->ui = array();
-    foreach(glob($this->ui_current.I."*") as $layout_item){
+    foreach(glob(MIRROR.I.CURRENT.I."*") as $layout_item){
       $key = substr(basename($layout_item),0,-4);
       $this->set->ui[$key] = $layout_item;
       }
-    $this->xml = new SimpleXMLElement($this->my["SITE"],null,true);
-    $this->css = file_get_contents($this->my["STYLE"]);
+    //
+    $this->set->cells = $this->xml->xpath("/html/body/div/table/tbody/tr/td");
+    $this->set->cells["top_left"]     = &$this->set->cells[0];
+    $this->set->cells["top_center"]   = &$this->set->cells[1];
+    $this->set->cells["top_right"]    = &$this->set->cells[2];
+    $this->set->cells["middle_left"]  = &$this->set->cells[3];
+    $this->set->cells["middle_center"]= &$this->set->cells[4];
+    $this->set->cells["middle_right"] = &$this->set->cells[5];
+    $this->set->cells["bottom_left"]  = &$this->set->cells[6];
+    $this->set->cells["bottom_center"]= &$this->set->cells[7];
+    $this->set->cells["bottom_right"] = &$this->set->cells[8];
     }
   public function __get($key){
     if(isset($this->set,$key)){
@@ -50,31 +66,24 @@ class page{
       }
       return false;
     }
-  public function check_mirror($path){
-    }
   public function handle_request($path){
-    if(array_key_exists($_SERVER["CFG"]["SEARCH"],$_GET)){
+    if(array_key_exists(KEY_SEARCH,$_GET)){
       loading_screen($location=null);
+      include_once($this->util["SEARCH_FILE"]);
       $path = $_GET[1];
-      $term = $_GET[$_SERVER["CFG"]["TERM"]];
-      $imgdir = $_SERVER["CFG"]["SETUP"]["IMAGES"];
-      if(is_file("../$path")){
-        $tags   = $_SERVER["CFG"]["ROOT"]["TAGS_FILE"];
-        }
-      else{
-        $tags   = $_SERVER["CFG"]["ROOT"]["TAGS_FOLDER"];
-        }
-      include_once($_SERVER["CFG"]["UTIL"]["SEARCH_FILE"]);
-      $s = $term."(".str_replace(" "," OR ",$_SERVER["CFG"]["ROOT"]["TAGS"]).") ".$tags;
-      $m = search_engine_request($_SERVER["CFG"]["UTIL"]["SEARCH_SERVER"],urlencode($s));
+      $basename = basename($path);
+      $term = $_GET[KEY_TERM];
+      $tags = ["TAGS_FOLDER","TAGS_FILE"][intval(is_file($path))];
+      $s = $term."(".str_replace(" "," OR ",$this->my["TAGS"]).") ".$this->my[$tags];
+      $m = search_engine_request($this->util["SEARCH_SERVER"],urlencode($s));
       $c = @count($m);
       if(!count($m)){
         trace_log("search_engine_find found zero $term");
-        return "";
+        return;
         }
       for($i=0;$i<$c;$i++){
         $img = "http://".htmlspecialchars(urldecode($m[$i]));
-        $ext = strtolower(substr($img,-3));
+        $ext = strtolower(substr($img,-4));
         $file = @file_get_contents($img);
         if($file){ $i = $c;}
         }
@@ -82,24 +91,28 @@ class page{
         trace_log("search_engine_fetch none");
         }
       else{
-        $newImage= $imgdir.I.$term.".".$ext;
+        $newImage= MIRROR.I.IMAGES.I.$basename.$ext;
         if(!file_put_contents($newImage,$file)){
           trace_log("search_engine_single.file_put_contents $img");
-          return "";
+          return;
         }
         else{
-          @file_put_contents($_SERVER["CFG"]["SETUP"]["FETCH_LOG"],"$term.$ext\t{$img}\n",FILE_APPEND );
-          $fifo = basename($path);
-          $cover  = $_SERVER["CFG"]["SETUP"]["CURRENT"].I.$fifo.".".$ext;
-          $width  = $_SERVER["CFG"]["SETUP"]["PREVIEW_MAX_WIDTH"];
-          $height = $_SERVER["CFG"]["SETUP"]["PREVIEW_MAX_HEIGHT"];
+          @file_put_contents(MIRROR.I.$this->setup["FETCH_LOG"],$term.$ext."\t{$img}\n",FILE_APPEND );
+          $cover  = MIRROR.I.CURRENT.I.$basename.$ext;
+          $width  = $this->setup["PREVIEW_MAX_WIDTH"];
+          $height = $this->setup["PREVIEW_MAX_HEIGHT"];
           create_preview($newImage,$cover,$width,$height);
           }
         }
-      loading_screen($location="/#".md5($term));
+      loading_screen($location="/?filter=".strtoupper(substr($basename,0,1))."#".md5($basename));
       }
     }
   public function addBasics(){
+    $head = $this->xml->xpath("/html/head");
+    $icon = $head[0]->addChild("link");
+    $icon->addAttribute("rel","icon");
+    $icon->addAttribute("type","image/png");
+    $icon->addAttribute("href",MIRROR.I."favicon.ico");
     //
     $title       = $this->xml->xpath("/html/head/title");
     $title[0][0] = $this->set->site_title;
@@ -109,17 +122,40 @@ class page{
     //
     $content     = $this->xml->xpath("/html/body/div/table/tbody/tr/td/div");
     $this->content_hook = &$content [0][0];
+    //
+    $label_display = $this->set->cells[7]->addChild("h2");
+    $label_display->addAttribute("id","label_display");
+    $this->set->cells[7]->addChild("br");
     }
   public function addNavi(SimpleXMLElement &$e,$path){
     }
   public function addMenu(SimpleXMLElement &$e,$path){
-    }
-  public function defer_addXML(&$e,$fifo,$func){
-    $this->stackoprints[] = ["hook"=>$e,"path"=>$fifo,"func"=>$func];
+
+    $link = $e->addChild("a");
+    $link->addAttribute("href","?0=".MIRROR);
+    $img = $link->addChild("img");
+    $img->addAttribute("src",CODEBASE.IMAGES.I."setup-button.png");
+    $img->addAttribute("id","setup_switch");
+
+    $form = $this->set->cells[5]->addChild("form");
+    $form->addAttribute("onchange","this-submit();");
+    $form->addAttribute("method","get");
+    $btn= $form->addChild("button","*");
+    $btn->addAttribute("name","filter");
+    $btn->addAttribute("value","");
+    $btn->addAttribute("class","navi");
+    $i = 65;
+    while($i<91){
+      $btn= $form->addChild("button",chr($i));
+      $btn->addAttribute("name","filter");
+      $btn->addAttribute("value",chr($i));
+      $btn->addAttribute("class","navi");
+      $i++;
+      }
     }
   public function addGlob(SimpleXMLElement &$e,$path_expression,$excludes=array()){
     //
-    $router = ["defer_addXML","addFolder"];
+    $router = ["deferXml","addFolder"];
     $args   = ["addFile",null];
     //
     foreach(glob($path_expression) as $fifo){
@@ -132,61 +168,18 @@ class page{
       $this->$fx["func"]($fx["hook"],$fx["path"]);
       }
     }
-  public function addFile(SimpleXMLElement &$e,$path){
-    $path = substr($path,strlen($this->docroot));
-    $ext = strtoupper(substr($path,-3));
-    if(array_key_exists($ext,$this->renderer)){
-      $render = $this->renderer[$ext];
-      $this->$render($e,$path);    
-      }
-    elseif($ext!="php"){
-      $basename = basename($path);
-      $name = substr($basename,0,-4);
-      $cover = array_key_exists($basename,$this->set->ui) ? $this->set->ui[$basename]: "";
-      $label = utf8_encode(str_replace(["_","."]," ", substr(basename($path),0,-4)));
-      $link = $e->addChild("a");
-      $link->addAttribute("href","?0=".urlencode($path));
-      $link->addAttribute("target","bypass");
-      $link->addAttribute("onmouseover","document.getElementById('title_display').innerHTML=\"$label\"");
-      $link->addAttribute("onmouseout","document.getElementById('title_display').innerHTML=\"\"");
-      $div = $link->addChild("div");
-      $div->addAttribute("class","file");
-      $div->addAttribute("id",md5($name));
-      
-      if(!$cover){
-        $div->addChild("br");
-        $div->addChild("span",$label);
-        $div->addChild("br");
-        $div->addChild("br");
-        $a = $div->addChild("a");
-        $a->addAttribute("href","?1=".urlencode($path)."&".$this->cfg["SEARCH"]."&".$this->cfg["TERM"]."=".$name);
-        $img = $a->addChild("img");
-        $img->addAttribute("title","Find Cover");
-        $img->addAttribute("src",MIRROR."/images/search-button.png");
-        $img->addAttribute("style","width:32px;height:32px");
-        }
-      else{
-        $img = $div->addChild("img");
-        $img->addAttribute("src",$cover);
-        $img->addAttribute("alt",$label);
-        $img->addAttribute("title",$label);
-        }
-      }   
-    }
-  public function addFolder(SimpleXMLElement &$e,$path){
-    //
+  public function addItem(SimpleXMLElement &$e,$path,$target,$class,$id,$label){
+    $label = utf8_encode(str_replace(["_","."]," ",$label));
     $basename = basename($path);
-    $path  = substr($path,strlen($this->docroot));
-    $label = utf8_encode(str_replace(["_","."]," ",$basename));
-    //
     $cover = array_key_exists($basename,$this->set->ui) ? $this->set->ui[$basename]: "";
     $link = $e->addChild("a");
-    $link-> addAttribute("href","?0=".urlencode($path));
-    $link-> addAttribute("onmouseover","document.getElementById('title_display').innerHTML=\"$label\"");
-    $link-> addAttribute("onmouseout","document.getElementById('title_display').innerHTML=\"\"");
-    $div  = $link->addChild("div");
-    $div->  addAttribute("class","folder");
-    $div->addAttribute("id",md5($path));
+    $link-> addAttribute("href","?0=".urlencode($path));    
+    $link->addAttribute("target",$target);
+    $link->addAttribute("onmouseover","document.getElementById('label_display').innerHTML=\"$label\"");
+    $link->addAttribute("onmouseout","document.getElementById('label_display').innerHTML=\"\"");
+    $div = $link->addChild("div");
+    $div->addAttribute("class",$class);
+    $div->addAttribute("id",$id);
     //
     if(!$cover){
       $div->addChild("br");
@@ -194,31 +187,50 @@ class page{
       $div->addChild("br");
       $div->addChild("br");
       $a = $div->addChild("a");
-      $a->addAttribute("href","?1=".urlencode($path)."&".$this->cfg["SEARCH"]."&".$this->cfg["TERM"]."=".$path);
+      $a->addAttribute("href","?1=".urlencode($path)."&".$this->cfg["SEARCH"]."&".$this->cfg["TERM"]."=".$label);
       $img = $a->addChild("img");
       $img->addAttribute("title","Find Cover");
-      $img->addAttribute("src",MIRROR."/images/search-button.png");
+      $img->addAttribute("src",CODEBASE.IMAGES.I."search-button.png");
       $img->addAttribute("style","width:32px;height:32px");
       }
     else{
       $img = $div->addChild("img");
-      $img->addAttribute("src",urlencode($cover));
+      $img->addAttribute("src",$cover);
       $img->addAttribute("alt",$label);
       $img->addAttribute("title",$label);
       }
     }
+  public function addFile(SimpleXMLElement &$e,$path){
+    $ext = strtoupper(substr($path,-3));
+    if(array_key_exists($ext,$this->renderer)){
+      $render = $this->renderer[$ext];
+      $this->$render($e,$path);    
+      }
+    elseif($ext!="PHP"){
+      $this->addItem($e,$path,$target="bypass","file",md5($path),substr($path,0,-4));
+      }   
+    }
+  public function addFolder(SimpleXMLElement &$e,$path){
+    $this->addItem($e,$path,$target="_self","folder",md5($path),$path);
+    }
   public function addImage(SimpleXMLElement &$e,$path){
+    $url = CODEBASE."file.php?0=".urlencode($path);
     $box = $e->addChild("div");
     $box->addAttribute("class","file image");
     $link = $box->addChild("a");
-    $link->addAttribute("href",MIRROR."/file.php?0=".$this->docroot.urlencode($path));
+    $link->addAttribute("href",$url);
     $img = $link->addChild("img");
-    $img->addAttribute("src",MIRROR."/file.php?0=".$this->docroot.urlencode($path));
+    $img->addAttribute("src",$url);
+    }
+  public function deferXml(&$e,$fifo,$func){
+    $this->stackoprints[] = ["hook"=>$e,"path"=>$fifo,"func"=>$func];
     }
   public function full_print(){
     $this->handle_request($this->dir);
     $this->addBasics($this->dir);
-    $this->addGlob($this->content_hook,$this->docroot.$this->dir.$this->filter."*",$this->excludes);
+    $this->addMenu($this->xml->xpath("/html/body")[0],$this->dir);
+    $this->addGlob($this->content_hook,$this->dir.$this->filter."*",$this->excludes);
     print $this->xml->asXML();
     }
+  //
   }

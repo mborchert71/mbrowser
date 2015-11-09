@@ -4,10 +4,6 @@
   color:#ffffff;
   text-shadow:  0px 2px #333333
   }
-#background {
-  background:#000000 url(".browse/images/background.jpg") center bottom;
-  overflow:hidden;
-  }
 #wallpaper {
   margin:auto;
   position: absolute;
@@ -114,18 +110,15 @@
   width:32px;
   height:32px
   }
-
 .navi a {
   padding-left:8px;
   text-decoration:none;
   text-shadow: 0px 3px #333333;
   }
-
 .folder{
   width:128px;
   height:128px;
   float:left;
-  background:url(".browse/images/folder_background.png") no-repeat top center;
   text-align:center;
   }
 .folder img{
@@ -137,7 +130,6 @@
   width:192px;
   height:128px;
   float:left;
-  background:url(".browse/images/file_background.png") no-repeat top center;
   text-align:center;
   border-radius:12px;
   }
@@ -198,10 +190,4 @@
   vertical-align:middle;
   width:32px;
   height:24px;
-  }
-#menu input[type="submit"]{
-  background:url(".browse/images/search-button.png") no-repeat center center transparent;
-  border:0;
-  width:32px;
-  height:32px;  
   }
