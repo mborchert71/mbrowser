@@ -39,7 +39,7 @@
 07.11.2015 10:38:48,31	Windows XP Test ist nogo. php 5.4.x letzte XP kompatible version
 07.11.2015 22:37:27,90	fx_root vs fx_folder, fx_cover, glob ui-images once
 08.11.2015  1:31:50,13	image_ordner nicht erstellen sondern anbieten
-branch: root zu realdocroot statt mirrordocroot, fstype hash, setup hash, static pages  
+09.11.2015 12:49:50,72	branch: root zu realdocroot statt mirrordocroot
 fs-functions auslagern aus renderer
 renderer laden
 datei-informationen
@@ -47,7 +47,8 @@ datei-informationen
 ----github--update-------------------------------------------------------------------------------------------
 	filebrowser ops I  create,delete,rename 
 ----github--beta-release-------------------------------------------------------------------------------------
-desperately needed: plugin-behavior layout , plugin-behavior filehandle
+todo:create folder , download here , upload
+	static pages  
 	sort year
 	play_list
 	play_next

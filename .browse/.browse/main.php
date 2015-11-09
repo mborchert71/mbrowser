@@ -1,33 +1,13 @@
 <?php
 
 function trace_log($msg){
-  error_log(@date("Y-m-d_H-i-s")."\t"
-  .basename(__FILE__)."\t"
-  .$msg."\n",3,
+  error_log(@date("Y-m-d_H-i-s")."\t".$msg."\n",3,
   sys_get_temp_dir()."/{$_SERVER['SERVER_NAME']}_{$_SERVER['SERVER_PORT']}.log");
   }
-function scan_layout(){
-  include_once($_SERVER["UTIL"]["SEARCH_FILE"]);
-  foreach(glob($_SERVER["ROOT"]."*") as $fifo){
-    $path = basename($fifo);
-    if(is_file($fifo)){
-      $name = substr($path,0,strlen($path)-4);
-      $cover= @array_pop( glob($_SERVER["CFG"]["FILE"]["FX_PATH"].I.FX.$name."*") );
-      if(!count($cover) && 
-         !search_engine_single($this->cfg["UTIL"]["SEARCH_SERVER"],
-                              utf8_encode($name),$_SERVER["CFG"]["FILE"]["TAGS"])){
-        trace_log("root_page.search_engine_single $name");
-        }
-      }
-    elseif(is_dir($fifo) && !is_dir($path)){
-      search_async($path);
-      }
-    }  
+function is_mirror($path){
+  return strpos($path,MIRROR)!==false;
   }
-function create_preview($src,$tgt,$maxwidth,$maxheight){
-  // Set a maximum height and width
-  $width = $maxwidth;
-  $height = $maxheight;
+function create_preview($src,$tgt,$width,$height){
   $ext = strtolower(substr($src,strlen($src)-3));
   list($width_orig, $height_orig) = getimagesize($src);
   $ratio_orig = $width_orig/$height_orig;
@@ -90,30 +70,26 @@ function loading_screen($location=null){
     exit;
     }
   }
-function handle_request($path){
-  }
-function route_file($file,$return=false){
-  if(!preg_match("/^".preg_quote(MIRROR)."/",$file)){
-    $dir = preg_match("/\//",$file) ? substr($file,0,strpos($file,"/")) : ".";
-    file_put_contents($dir.I.$_SERVER["CFG"]["FILE"]["WATCH_LOG"],$file);
-    $url = urlencode($file);
+function route_file($file){
+  if(!is_mirror($file)){
+    $dir = strpos($file,I)===false ? "" : I.substr($file,0,strpos($file,I));
+    file_put_contents(MIRROR.$dir.I.$_SERVER["CFG"]["FILE"]["WATCH_LOG"],$file);
     }
   if(preg_match("/".$_SERVER["CFG"]["FILE"]["LAUNCH"]."/",$file)){
-    exec('"'.realpath(".browse".I."system".I.$_SERVER["OS"].I."launch.".$_SERVER["SHELL"]).'" "'.$_SERVER["ROOT"].$file.'"');
+    exec('"'.realpath(CODEBASE."system".I.OS.I."launch.".SHELL_EXT).'" "'.$file.'"');
     }
   else{
-    header("location: .browse/file.php?0=".urlencode($fifo));
+    header("location: ".CODEBASE."file.php?0=".urlencode($file));
     }
   }
-function route_folder($dir,$return=false){
-  include($_SERVER["CFG"][["FOLDER","SETUP","ROOT"][ !$dir ? 2 : intval(preg_match("/^".preg_quote(MIRROR)."/",$dir))]]["RENDERER"]);
+function route_folder($dir){
+  include($_SERVER["CFG"][["FOLDER","SETUP","ROOT"][ !$dir ? 2 : intval(is_mirror($dir))]]["RENDERER"]);
   (new page($dir))->full_print();
   }
 function run(){
-  include(".browse/head.php");
-  $r=($_SERVER["ROOT"]    ="../");
-  $p=($_REQUEST["PATH"]   =[(array_key_exists("0",$_GET) ? $_GET[0] : "")]);
-  handle_request($p[0]);
-  $q=($_SERVER["RESPONSE"]= is_dir($r.$p[0]) ?route_folder($p[0]) :route_file($p[0]));
+  include(".browse/.browse/head.php");
+  $_GET[0]= array_key_exists("0",$_GET) ? $_GET[0] : "";
+  $route = ["route_folder","route_file"][is_file($_GET[0])];
+  $route($_GET[0]);
   clearstatcache();
   }
