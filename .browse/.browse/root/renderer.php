@@ -8,6 +8,7 @@ class page{
   public $set;              //maybe changing varname vars
   public $stackoprints=[];  //stack of content
   public $content_hook;     //SimpleXMLElement
+  public $xmlraw;           //htm template
   public $xml;              //htm template
   public $css;              //css style
   public $cfg;              //global.ini
@@ -28,8 +29,9 @@ class page{
     $this->url   = urlencode($dir);
     $this->urlq  = "?0=".$this->url;
     $this->label = utf8_encode(basename($dir));
-    $this->xml   = new SimpleXMLElement($this->my["SITE"],null,true);
-    $this->css   = file_get_contents($this->my["STYLE"]);
+    $this->xmlraw= file_get_contents(__DIR__.I."page.htm");
+    $this->xml = new SimpleXMLElement($this->xmlraw);
+    $this->css = file_get_contents(__DIR__.I."style.css");
     $this->excludes  = explode("\t",$this->my["EXCLUDE"]);
     //
     $this->set             =  new stdClass;
@@ -69,7 +71,7 @@ class page{
   public function handle_request($path){
     if(array_key_exists(KEY_SEARCH,$_GET)){
       loading_screen($location=null);
-      include_once($this->util["SEARCH_FILE"]);
+      include_once(CODEBASE."search.php");
       $path = $_GET[1];
       $basename = basename($path);
       $term = $_GET[KEY_TERM];

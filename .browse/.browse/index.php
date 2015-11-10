@@ -1,1 +1,1 @@
-<?php include(".browse/main.php");run();
+<?php include(".o/.o/main.php");run();

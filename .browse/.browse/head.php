@@ -9,7 +9,7 @@ else{
 //
 const I      = "/"; //DIRECTORY_SEPARATOR;
 const J      = "/";
-const MIRROR = ".browse";
+define("MIRROR", basename(__DIR__) );
 const CODEBASE = MIRROR.I.MIRROR.I;
 //
 $_SERVER["CFG"] = parse_ini_file(CODEBASE."global.ini",true);

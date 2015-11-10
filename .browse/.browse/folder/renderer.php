@@ -8,6 +8,7 @@ class page{
   public $set;              //maybe changing varname vars
   public $stackoprints=[];  //stack of content
   public $content_hook;     //SimpleXMLElement
+  public $xmlraw;           //htm template
   public $xml;              //htm template
   public $css;              //css style
   public $cfg;              //global.ini
@@ -29,14 +30,15 @@ class page{
     $this->urlq   = "?0=".$this->url;
     $this->label  = utf8_encode(basename($dir));
     $this->excludes     = explode("\t",$this->my["EXCLUDE"]);
-    $this->xml = new SimpleXMLElement($this->my["SITE"],null,true);
-    $this->css = file_get_contents($this->my["STYLE"]);
+    $this->xmlraw= file_get_contents(__DIR__.I."page.htm");
+    $this->xml = new SimpleXMLElement($this->xmlraw);
+    $this->css = file_get_contents(__DIR__.I."style.css");
     //
     $this->set = new stdClass;
     $this->set->site_title  = $this->my["SITE_TITLE"];
-    $this->set->wallpaper   = $this->my["FX_WPAPER"];
-    $this->set->cast        = $this->my["FX_CAST"];
-    $this->set->logo        = $this->my["FX_LOGO"];
+    $this->set->wallpaper   = CODEBASE.IMAGES.I."wallpaper.png";
+    $this->set->cast        = CODEBASE.IMAGES.I."cast.jpg";
+    $this->set->logo        = CODEBASE.IMAGES.I."logo.png";
     $this->set->mirror_fifo = glob(MIRROR.I.$this->dir.I."*");
     $this->set->renderer = $this->cfg["RENDERER"];
     $this->set->ui = array();
@@ -249,7 +251,7 @@ class page{
       $extypes[] = $ext;
       $hook = $this->xml->xpath("/html/head");
       $head = $hook[0];
-      $head->addChild("style",".{$ext} {background-image:url(\"".CODEBASE.IMAGES.I.strtolower($ext).".png\");}");
+      $head->addChild("style",".{$ext} {background-image:url(\"".CODEBASE.IMAGES.I.strtolower($ext).".png\");background-repeat:no-repeat}");
       }
     return $ext;
     }

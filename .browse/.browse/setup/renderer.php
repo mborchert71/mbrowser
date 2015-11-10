@@ -12,6 +12,7 @@ class page{
   public $set;              //maybe changing varname vars
   public $stackoprints=[];  //stack of content
   public $content_hook;     //SimpleXMLElement
+  public $xmlraw;           //htm template
   public $xml;              //htm template
   public $css;              //css style
   public $exclude;
@@ -28,13 +29,14 @@ class page{
     //
     $this->set = new stdClass;
     $this->set->site_title  = $this->my["SITE_TITLE"];
-    $this->set->wallpaper   = $this->my["FX_WPAPER"];
-    $this->set->cast        = $this->my["FX_CAST"];
-    $this->set->logo        = $this->my["FX_LOGO"];
+    $this->set->wallpaper   = CODEBASE.IMAGES.I."wallpaper.png";
+    $this->set->cast        = CODEBASE.IMAGES.I."cast.jpg";
+    $this->set->logo        = CODEBASE.IMAGES.I."logo.png";
     $this->set->mirror_fifo = glob(str_replace([I.IMAGES,MIRROR.I],"",$this->dir)."/*");
     $this->set->renderer = $this->cfg["RENDERER"];
-    $this->xml = new SimpleXMLElement($this->my["SITE"],null,true);
-    $this->css = file_get_contents($this->my["STYLE"]);
+    $this->xmlraw= file_get_contents(__DIR__.I."page.htm");
+    $this->xml = new SimpleXMLElement($this->xmlraw);
+    $this->css = file_get_contents(__DIR__.I."style.css");
     //
     }
   public function __get($key){
@@ -93,7 +95,7 @@ class page{
         }
       if(array_key_exists(KEY_TERM,$_POST)){
         loading_screen($location=null);
-        include_once($this->util["SEARCH_FILE"]);
+        include_once(CODEBASE."search.php");
         search_engine_find($this->dir,$this->util["SEARCH_SERVER"],$_POST[KEY_TERM],$_POST[KEY_COUNT]);
         loading_screen($location="?0=".$this->dir);
         }

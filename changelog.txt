@@ -40,15 +40,17 @@
 07.11.2015 22:37:27,90	fx_root vs fx_folder, fx_cover, glob ui-images once
 08.11.2015  1:31:50,13	image_ordner nicht erstellen sondern anbieten
 09.11.2015 12:49:50,72	branch: root zu realdocroot statt mirrordocroot
-fs-functions auslagern aus renderer
-renderer laden
-datei-informationen
+10.11.2015  1:28:15,26	".browse" auf index.php reduziert. global.ini uglified
+create images current on startup if not existent
+cleanup global.ini
+use one page.htm template
+mime-renderer load 
+index.php zurück ins mirror verzeichnis
 ----linux--execution-test------------------------------------------------------------------------------------
 ----github--update-------------------------------------------------------------------------------------------
 	filebrowser ops I  create,delete,rename 
 ----github--beta-release-------------------------------------------------------------------------------------
-todo:create folder , download here , upload
-	static pages  
+optional menue abc-buttons, .. file folder switch , extension switch , filter form , ...,year ,....
 	sort year
 	play_list
 	play_next

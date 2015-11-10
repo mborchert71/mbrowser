@@ -83,11 +83,11 @@ function route_file($file){
     }
   }
 function route_folder($dir){
-  include($_SERVER["CFG"][["FOLDER","SETUP","ROOT"][ !$dir ? 2 : intval(is_mirror($dir))]]["RENDERER"]);
+  include(CODEBASE.I.(["folder","setup","root"][ !$dir ? 2 : intval(is_mirror($dir))]).I."renderer.php");
   (new page($dir))->full_print();
   }
 function run(){
-  include(".browse/.browse/head.php");
+  include(__DIR__.DIRECTORY_SEPARATOR."head.php");
   $_GET[0]= array_key_exists("0",$_GET) ? $_GET[0] : "";
   $route = ["route_folder","route_file"][is_file($_GET[0])];
   $route($_GET[0]);
